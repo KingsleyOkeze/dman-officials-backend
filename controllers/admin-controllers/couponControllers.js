@@ -17,7 +17,7 @@ const fetchCouponsFunction = async (req, res) => {
         }
 
         if (allCoupons.length === 0) {
-            return res.status(404).json({ error: "No coupons found" });
+            return res.status(404).json({ error: "No record found!" });
         }
 
 
@@ -38,6 +38,139 @@ const fetchCouponsFunction = async (req, res) => {
 }
 
 
+const addCouponFunction = async (req, res) => {
+    const {
+        couponName,
+        couponCode,
+        discountType,
+        discountAmount,
+        minPurchaseAmount,
+        status,
+        category,
+        subCategory,
+        product,
+        expirationDate,
+        // usageLimit,
+    } = req.body;
+
+    try {
+        if (
+            !couponName ||
+            !couponCode ||
+            !discountType ||
+            !discountAmount ||
+            !status ||
+            !category ||
+            !expirationDate         
+        ) {
+            return res.status(404).json({ error: "Please fill in required field!"});
+        }
+
+        const newCoupon = new couponModel({
+            couponName,
+            couponCode,
+            discountType,
+            discountAmount,
+            minPurchaseAmount,
+            status,
+            category,
+            subCategory,
+            product,
+            expirationDate,
+            // usageLimit,
+        });
+
+        const saveCoupon = await newCoupon.save();
+
+        if (!saveCoupon) {
+            console.log("Coupon failed to saved!");
+            return res.status(401).json({ error: "Failed to saved Coupon"});
+        }
+        console.log("Coupon saved successfully!");
+        return res.status(200).json({ message: "Coupon saved successfully!"});
+
+    } catch (error) {
+        console.log("Internal Server Error!")
+        return res.status(500).json({ error: "Internal Server Error!"});
+    }
+
+
+}
+
+
+
+
+
+
+const editCouponFunction = async (req, res) => {
+    const {
+        couponId,
+        couponName,
+        couponCode,
+        discountType,
+        discountAmount,
+        minPurchaseAmount,
+        status,
+        category,
+        subCategory,
+        product,
+        expirationDate,
+        // usageLimit,
+    } = req.body;
+
+    try {
+        if (
+            !couponName ||
+            !couponCode ||
+            !discountType ||
+            !discountAmount ||
+            !status ||
+            !category ||
+            !expirationDate         
+        ) {
+            return res.status(404).json({ error: "Please fill in required field!"});
+        }
+
+        const updatedFields = {
+            couponName,
+            couponCode,
+            discountType,
+            discountAmount,
+            minPurchaseAmount,
+            status,
+            category,
+            subCategory,
+            product,
+            expirationDate,
+            // usageLimit,
+        };
+
+        const updatedCoupon = await couponModel.findByIdAndUpdate(
+            couponId,                  // The ID of the document to update
+            { $set: updatedFields }, // The fields to update
+            { new: true }           // Return the updated document
+          );
+      
+        if (!updatedCoupon) {
+            return res.status(400).json({ error: "Coupon not found!"});
+        } 
+        
+        console.log("Coupon updated successfully!");
+        return res.status(200).json({ message: "Coupon saved successfully!"});
+
+    } catch (error) {
+        console.log("Internal Server Error!")
+        return res.status(500).json({ error: "Internal Server Error!"});
+    }
+
+
+}
+
+
+
+
+
+
 
 
 
@@ -45,5 +178,7 @@ const fetchCouponsFunction = async (req, res) => {
 
 
 module.exports = {
-    fetchCouponsFunction
+    fetchCouponsFunction,
+    addCouponFunction,
+    editCouponFunction
 }

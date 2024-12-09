@@ -28,10 +28,6 @@ const customerSchema = new mongoose.Schema({
         type: Date, // Stores the date of birth as a date
         required: true,
     },
-    createdAt: {
-        type: Date,
-        default: Date.now, // Automatically sets the creation date
-    }
 
 }, { timestamps: true });
 

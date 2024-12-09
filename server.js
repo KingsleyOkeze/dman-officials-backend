@@ -2,8 +2,6 @@ require('dotenv').config();
 const express = require("express");
 const app = express();
 const cors = require("cors");
-const fs = require('fs');
-const path = require('path'); 
 const mongoose = require("mongoose");
 const adminRoutes = require("./routes/adminRoutes");
 // const customerRoutes = require("./routes/customerRoutes");
@@ -32,11 +30,7 @@ mongoose.connect(process.env.MONGOB_URL).then(() => {
  
 
 
-// Ensure uploads directory exists
-const uploadPath = '/tmp/uploads'; // Use the /tmp directory
-if (!fs.existsSync(uploadPath)) {
-  fs.mkdirSync(uploadPath, { recursive: true }); // Create the directory if it doesn't exist
-}
+
 
 
 

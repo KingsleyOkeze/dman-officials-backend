@@ -5,25 +5,42 @@ const couponSchema = new mongoose.Schema({
         type: String,
         required: true, 
     },
+    couponCode: {
+        type: String,
+        required: true
+    },
     status: {
         type: String,
         required: true, 
         enum: ["Active", "Inactive", "Expired"], // Restricts to these statuses
     },
-    type: {
-        type: String,
-        enum: ["Fixed", "Percentage"], // Restricts to these coupon types
+    category: {
+        type: String
     },
-    amount: {
-        type: String,
-        type: Number,
-        required: true,
-        min: 0, // Ensures no negative amounts
+    subCategory: {
+        type: String
     },
-    createdAt: {
-        type: Date,
-        default: Date.now, // Automatically sets the creation date
-    }
+    discountType: {
+        type: String,
+        required: true
+    },
+    discountAmount: {
+        type: String,
+        required: true
+    },
+    minPurchaseAmount: {
+        type: String
+    },
+    expirationDate: {
+        type: String,
+        required: true
+    },
+    // usageLimit: {
+    //     type: String
+    // },
+    product: {
+        type: String
+    },
 
 }, { timestamps: true });
 
