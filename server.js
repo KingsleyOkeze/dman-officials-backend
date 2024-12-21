@@ -4,7 +4,7 @@ const app = express();
 const cors = require("cors");
 const mongoose = require("mongoose");
 const adminRoutes = require("./routes/adminRoutes");
-// const customerRoutes = require("./routes/customerRoutes");
+const customerRoutes = require("./routes/customerRoutes");
 
 const PORT = process.env.PORT || 5000;
 
@@ -44,4 +44,4 @@ mongoose.connect(process.env.MONGOB_URL).then(() => {
 
 
 app.use("/admin", adminRoutes);
-// app.use("/customer", customerRoutes);
+app.use("/customer", customerRoutes);

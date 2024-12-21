@@ -1,5 +1,6 @@
 require('dotenv').config();
 const adminModel = require('../../models/adminModel');
+const customerModel = require('../../models/customerModel');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
@@ -30,6 +31,12 @@ const signupFunction = async (req, res) => {
 		} 
 
 		// Check if email already exist in the database
+		const existAsACustomer = await customerModel.findOne({ email });
+
+		if (existAsACustomer) {
+			return res.status(401).json({ error: 'User already exist.' });
+		}
+
 		const user = await adminModel.findOne({ email });
 
 		if (user) {
@@ -230,6 +237,7 @@ const loginFunction = async (req, res) => {
 			return res.status(403).json({
 				error: 'Email is not verified!',
 				redirectUrl: `${process.env.CLIENT_URL}/admin/email-sent/${user._id}`,
+				userId: user._id,
 				role: user.role,
 			});
 		
@@ -344,10 +352,6 @@ const resetPasswordFunction = async (req, res) => {
 	}
 };
   
-
-
-
-
 
 
 

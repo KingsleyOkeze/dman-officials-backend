@@ -1,11 +1,11 @@
 const mongoose = require('mongoose');
 
 const customerSchema = new mongoose.Schema({
-    customerFirstName: {
+    firstName: {
         type: String,
         required: true, 
     },
-    customerLastName: {
+    lastName: {
         type: String,
         required: true, 
     },
@@ -17,8 +17,13 @@ const customerSchema = new mongoose.Schema({
     },
     phoneNumber: {
         type: String,
-        required: true, 
-        match: /^\+?\d{7,15}$/, // Validates international phone number format
+        // type: String,
+        // required: true, 
+        // match: /^\+?\d{7,15}$/, // Validates international phone number format
+    },
+    password: {
+        type: String,
+        required: true
     },
     country: {
         type: String,
@@ -27,6 +32,28 @@ const customerSchema = new mongoose.Schema({
     dob: {
         type: Date, // Stores the date of birth as a date
         required: true,
+    },
+    role: {
+        type: String,
+        required: true,
+        enum: ["admin", "customer"], // Only these two roles
+        default: "customer", // Default to "customer" if no role is provided
+    },
+    
+    verificationToken: {
+        type: String,
+    },
+    isEmailVerified: {
+        type: Boolean,
+        default: false,
+    },
+    resetPasswordOtp: {
+        type: String, // Store OTP as a string for flexibility
+        default: null,
+    },
+    otpExpiration: {
+        type: Date, // To track when the OTP will expire
+        default: null,
     },
 
 }, { timestamps: true });

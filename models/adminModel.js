@@ -4,12 +4,15 @@ const adminSchema = new mongoose.Schema(
 	{
 		first_name: {
 			type: String,
+			required: true,
 		},
 		last_name: {
 			type: String,
+			required: true,
 		},
 		email: {
 			type: String,
+			required: true,
 		},
 		password: {
 			type: String,
@@ -19,8 +22,8 @@ const adminSchema = new mongoose.Schema(
 		role: {
             type: String,
             required: true,
-            enum: ["admin", "customer"], // Only these two roles
-            default: "customer", // Default to "customer" if no role is provided
+            enum: ["admin"], // Only these two roles
+            default: "admin", // Default to "admin" if no role is provided
         },
 		
 		verificationToken: {

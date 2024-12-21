@@ -28,8 +28,8 @@ const couponSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    minPurchaseAmount: {
-        type: String
+    minimumPurchaseAmount: {
+        type: Number
     },
     expirationDate: {
         type: String,

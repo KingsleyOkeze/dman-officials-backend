@@ -63,7 +63,7 @@ const addCouponFunction = async (req, res) => {
             !category ||
             !expirationDate         
         ) {
-            return res.status(404).json({ error: "Please fill in required field!"});
+            return res.status(400).json({ error: "Please fill in required field!"});
         }
 
         const newCoupon = new couponModel({
@@ -100,8 +100,6 @@ const addCouponFunction = async (req, res) => {
 
 
 
-
-
 const editCouponFunction = async (req, res) => {
     const {
         couponId,
@@ -109,7 +107,7 @@ const editCouponFunction = async (req, res) => {
         couponCode,
         discountType,
         discountAmount,
-        minPurchaseAmount,
+        minimumPurchaseAmount,
         status,
         category,
         subCategory,
@@ -128,7 +126,7 @@ const editCouponFunction = async (req, res) => {
             !category ||
             !expirationDate         
         ) {
-            return res.status(404).json({ error: "Please fill in required field!"});
+            return res.status(400).json({ error: "Please fill in required field!"});
         }
 
         const updatedFields = {
@@ -136,7 +134,7 @@ const editCouponFunction = async (req, res) => {
             couponCode,
             discountType,
             discountAmount,
-            minPurchaseAmount,
+            minimumPurchaseAmount,
             status,
             category,
             subCategory,
@@ -152,7 +150,7 @@ const editCouponFunction = async (req, res) => {
           );
       
         if (!updatedCoupon) {
-            return res.status(400).json({ error: "Coupon not found!"});
+            return res.status(401).json({ error: "Coupon not found!"});
         } 
         
         console.log("Coupon updated successfully!");
@@ -168,7 +166,25 @@ const editCouponFunction = async (req, res) => {
 
 
 
+const fetchCouponByIdFunction = async (req, res) => {
+    const { couponId } = req.params; // Extract the coupon ID from the route parameter
 
+    try {
+        if (!couponId) {
+            return res.status(400).json({ error: 'Coupon ID is required!' })
+        }
+
+        const coupon = await couponModel.findById(couponId); 
+        if (!coupon) {
+            return res.status(404).json({ error: 'Coupon not found!' });
+        }
+
+        return res.status(200).json(coupon); 
+    } catch (error) {
+      console.error('Error fetching coupon:', error);
+      return res.status(500).json({ error: 'Internal server error!' });
+    }
+};
 
 
 
@@ -180,5 +196,6 @@ const editCouponFunction = async (req, res) => {
 module.exports = {
     fetchCouponsFunction,
     addCouponFunction,
-    editCouponFunction
+    editCouponFunction,
+    fetchCouponByIdFunction
 }
