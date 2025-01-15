@@ -1,3 +1,4 @@
+// CUSTOMER PRODUCT CONTROLLERS
 const customerModel = require("../../models/customerModel");
 const productModel = require("../../models/productModel");
 const savedProductModel = require("../../models/savedProductModel");
@@ -39,6 +40,48 @@ const fetchProductsFunction = async (req, res) => {
 };
 
 
+
+
+
+const fetchProductDetailsFunction = async (req, res) => {
+    const { productId } = req.params;
+
+    try {
+        if (!productId) {
+            return res.status(400).json({ error: "Failed to identify product Id"});
+        }
+
+        // Check if the product exists
+        const product = await productModel.findById(productId);
+
+        if (!product) {
+            return res.status(404).json({ error: "Product not found!" });
+        }
+console.log('successfully fetch product details!', product)
+        return res.status(200).json({
+            message: 'Successfully fetched product details!',
+            result: product
+        });
+
+    } catch (error) {
+        return res.status(500).json({ error: "Internal Server Error!"});
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // --------------------------------------------------------- //
 const fetchSavedProductFunction = async (req, res) => {
   const { customerId } = req.body;
@@ -61,6 +104,7 @@ const fetchSavedProductFunction = async (req, res) => {
 console.log('fetch savedProducts is', savedProducts);
 
       return res.status(200).json({savedProducts: savedProducts});
+
   } catch (error) {
       return res.status(500).json({ error: "Internal Server Error!" });
   }
@@ -158,6 +202,7 @@ const removeFromSavedProductFunction = async (req, res) => {
             message: "Product removed from Saved Product successfully!", 
             savedProducts: updatedSavedProducts
         });
+
     } catch (error) {
         console.error("Error removing from Saved Product:", error);
         return res.status(500).json({ error: "Internal Server Error!" });
@@ -168,6 +213,7 @@ const removeFromSavedProductFunction = async (req, res) => {
 
 module.exports = {
     fetchProductsFunction,
+    fetchProductDetailsFunction,
     savedProductFunction,
     fetchSavedProductFunction,
     removeFromSavedProductFunction

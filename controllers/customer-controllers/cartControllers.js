@@ -1,3 +1,4 @@
+// CUSTOMER CART CONTROLLERS
 const cartModel = require("../../models/cartModel");
 const customerModel = require("../../models/customerModel");
 const productModel = require("../../models/productModel");
@@ -124,10 +125,46 @@ const removeFromCartFunction = async (req, res) => {
 };
 
 
+const fetchCartTotalPrice = async (req, res) => {
+    const { customerId } = req.body;
+
+    try {
+        if (!customerId) {
+            return res.status(400).json({ error: "Failed to identify User!"});
+        }
+
+        const customer = await customerModel.findById(customerId);
+
+        if (!customer) {
+            return res.status(404).json({ error: "User doesn't exist!"})
+        }
+
+        const cartItems = await cartModel
+            .find({ customerRef: customerId })
+            .populate('productRef');
+
+        let totalPrice = 0;
+
+        for (let i = 0; i < cartItems.length; i++) {
+            const item = cartItems[i];
+            totalPrice += item.productRef.productOfferPrice * item.quantity
+        }
+
+        console.log('cart total price is', totalPrice)
+
+        return res.status(200).json({ message: "Cart total price calculated", totalPrice });
+
+    } catch (error) {
+        console.error("Failed to calculate cart total price", error);
+        return res.status(500).json({ error: "Internal Server Error!"});
+    }
+
+};
 
 
 module.exports = {
     addToCartFunction,
     fetchCartFunction,
-    removeFromCartFunction
+    removeFromCartFunction,
+    fetchCartTotalPrice
 };

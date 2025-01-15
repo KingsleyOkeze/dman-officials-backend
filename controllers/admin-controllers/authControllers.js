@@ -1,3 +1,4 @@
+// ADMIN AUTH CONTROLLERS
 require('dotenv').config();
 const adminModel = require('../../models/adminModel');
 const customerModel = require('../../models/customerModel');
@@ -354,7 +355,27 @@ const resetPasswordFunction = async (req, res) => {
   
 
 
+// Logout Function
+const logoutFunction = (req, res) => {
+    try {
+        // Clear the refreshToken cookie
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: true, // Use secure cookies in production
+            sameSite: "None", // Adjust based on your frontend setup
+        });
 
+        console.log("User logged out successfully.");
+        return res.status(200).json({
+            message: "Logged out successfully",
+        });
+    } catch (error) {
+        console.error("Error during logout:", error);
+        return res.status(500).json({
+            error: "Internal Server Error",
+        });
+    }
+};
 
 
 
@@ -364,5 +385,6 @@ module.exports = {
 	verifySignUpEmailFunction,
 	resendSignUpVerificationEmailFunction,
 	forgotPasswordFunction,
-	resetPasswordFunction
+	resetPasswordFunction,
+	logoutFunction
 }

@@ -1,3 +1,4 @@
+// ADMIN CUSTOMER CONTROLLERS
 const customerModel = require("../../models/customerModel");
 
 const fetchCustomersFunction = async (req, res) => {

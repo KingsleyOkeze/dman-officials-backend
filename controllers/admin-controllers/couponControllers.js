@@ -1,3 +1,4 @@
+// ADMIN COUPON CONTROLLERS
 const couponModel = require("../../models/couponModel");
 
 const fetchCouponsFunction = async (req, res) => {

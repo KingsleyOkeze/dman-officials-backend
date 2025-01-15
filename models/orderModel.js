@@ -1,20 +1,78 @@
 const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
-    customerFirstName: {
-        type: String
+    customerRef: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'customers',
+        required: true
     },
-    customerLastName: {
-        type: String
+    firstName: {
+        type: String,
+        required: true
     },
-    orderAmount: {
-        type: String
+    lastName: {
+        type: String,
+        required: true
     },
-    payment: {
-        type: String
+    phoneNumber: {
+        type: String,
+        required: true
     },
-    status: {
-        type: String
+    country: {
+        type: String,
+        required: true
+    },
+    address: {
+        type: String,
+        required: true
+    },
+    city: {
+        type: String,
+        required: true
+    },
+    state: {
+        type: String,
+        required: true
+    },
+    postalCode: {
+        type: String,
+    },
+    company: {
+        type: String,
+    },
+    orderTotalAmount: {
+        type: Number,
+        required: true
+    },
+    currency: {
+        type: String,
+        default: '₦' //Default currency
+    },
+    paymentStatus: {
+        type: String,
+        default: 'pending', //Default payment status
+        required: true
+    },
+    paymentReference: {
+        type: String,
+    },
+    orderStatus: {
+        type: String,
+        enum: [
+            'Pending',
+            'Payment Successful',
+            'Order Confirmed',
+            'Processing',
+            'Shipped',
+            'In Transit',
+            'Out for Delivery',
+            'Delivered',
+            'Cancelled',
+            'Refunded',
+            'Return Initiated',
+            'Return Completed'
+        ],
+        default: 'Pending'
     },
     createdAt: {
         type: Date
