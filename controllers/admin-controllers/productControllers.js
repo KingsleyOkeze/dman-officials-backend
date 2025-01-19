@@ -19,11 +19,6 @@ const fetchProductsFunction = async (req, res) => {
           return res.status(401).json({ error: "Failed to fetch all orders"})
       }
 
-      if (allProducts.length === 0) {
-          return res.status(404).json({ error: "No orders found" });
-      }
-
-
       // Get the exact document count
       const totalProductsCountInDb = await productModel.countDocuments(); 
       console.log("total document in db", totalProductsCountInDb);

@@ -43,22 +43,62 @@ const verifyTransactionFunction = async (req, res) => {
         response.on('end', async () => {
             const parsedData = JSON.parse(data);
             console.log('response on verify transaction', parsedData);
-            
+            const amountCharged = parsedData.data.amount; // Get the amount from parsedData
+
+            // Transaction is verified successfully do this:
             if (parsedData.status && parsedData.data.status === "success") {
-                // Transaction is verified successfully
-                const updatedOrder = await orderModel.findByIdAndUpdate(
-                    orderId,
-                    { 
-                        paymentStatus: "success", // Update the payment status
-                        paymentReference: reference, // Update the payment reference
-                        orderTotalAmount: 0 // Update Order Total Amount
-                    },
-                    { new: true, runValidators: true } // Options: return the updated document and run validators
-                );
+                //Confirm if the money paid is same as Order total amount.
+                const order = await orderModel.findById(orderId);
+
+                if (!order) return res.status(404).json({ error: "Order not found!" });
+
+                // Convert Order total amount which is in naira to kobo (for paystack sake)
+                const orderTotalAmountInKobo = order.orderTotalAmount * 100;  //Multiply by 100
+
+                if (orderTotalAmountInKobo !== amountCharged) {
+                    // Mark payment as payment mismatch and notify
+                    order.paymentStatus = "payment mismatch";
+                    order.amountCustomerPaid = parseInt(amountCharged);
+                    order.paymentReference = reference;
+                    await order.save();
+
+                    // Clear Customers cart
+                    await cartModel.deleteMany({ customerRef: customer._id});
+
+
+                    // Notify customer 
+                    emailingFunction(
+                        // notify customer with email
+                    );
+
+                    // Notify customer support (optional)
+                    emailingFunction(
+                        // notify admin with email
+                    )
+
+
+
+                    // Respond with a clear error to the user
+                    return res.status(200).json({
+                        status: "payment mismatch",
+                        message: "Payment amount does not match the order total. Our team is reviewing this.",
+                        details: { 
+                            orderTotalAmount: order.orderTotalAmount, 
+                            amountCharged, 
+                        }
+                    })
+                }
+
+                order.paymentStatus = "success"; // Update the payment status
+                order.paymentReference = reference; // Update the payment reference
+
+                const updatedOrder = await order.save();
 
                 if (!updatedOrder) {
-                    console.log('Order not found');
-                    return res.status(404).json({ error: "Order not found!"});
+                    console.log('Order payment confirmation status failed to update!');
+                    return res.status(404).json({ 
+                        error: "Order payment confirmation status failed to update!"
+                    });
                 }
         
                 console.log('Updated Order:', updatedOrder);
@@ -72,7 +112,7 @@ const verifyTransactionFunction = async (req, res) => {
     
                     <p>Thank you for your payment!</p>
     
-                    <p>Your payment of <strong>${updatedOrder.orderTotalAmount}</strong> was successful, and your order ID is <strong>${orderId}</strong>.</p>
+                    <p>Your payment of <strong>${amountCharged}</strong> was successful, and your order ID is <strong>${orderId}</strong>.</p>
     
                     <p>Your transaction reference is <strong>${reference}</strong>.</p>
     
@@ -82,6 +122,8 @@ const verifyTransactionFunction = async (req, res) => {
     
                     <p>Best regards,<br>Your Company Name</p>
                 `;
+
+                // Email customer on their successful purchase
                 emailingFunction(
                     customerEmail, 
                     successPaymentTitle, 

@@ -57,6 +57,17 @@ const productSchema = new mongoose.Schema({
         type: Date,
     },
 
+    productStatus: {
+        type: String,
+        enum: [
+            'available', 
+            'limited stock',
+            'out of stock', 
+            'discontinued'
+        ], // Define the possible statuses
+        default: 'available' // Default status when a product is created
+    }
+
 }, { timestamps: true });
 
 const productModel = mongoose.model("products", productSchema);

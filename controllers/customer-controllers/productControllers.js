@@ -71,47 +71,11 @@ console.log('successfully fetch product details!', product)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 // --------------------------------------------------------- //
-const fetchSavedProductFunction = async (req, res) => {
-  const { customerId } = req.body;
-
-  try {
-      // Validate input
-      if (!customerId) {
-          return res.status(400).json({ error: "Customer ID is required!" });
-      }
-
-      // Fetch cart items with product details
-      const savedProducts = await savedProductModel
-          .find({ customerRef: customerId })
-          .populate('productRef');
-
-      if (savedProducts.length === 0) {
-          return res.status(200).json({ message: "Saved products is empty!", savedProducts });
-      }
-
-console.log('fetch savedProducts is', savedProducts);
-
-      return res.status(200).json({savedProducts: savedProducts});
-
-  } catch (error) {
-      return res.status(500).json({ error: "Internal Server Error!" });
-  }
-};
 
 
-const savedProductFunction = async (req, res) => {
+
+const saveProductFunction = async (req, res) => {
     const { customerId, productId } = req.body;
     console.log('save product stuff', customerId, productId )
     try {
@@ -214,7 +178,6 @@ const removeFromSavedProductFunction = async (req, res) => {
 module.exports = {
     fetchProductsFunction,
     fetchProductDetailsFunction,
-    savedProductFunction,
-    fetchSavedProductFunction,
+    saveProductFunction,
     removeFromSavedProductFunction
 };

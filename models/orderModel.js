@@ -56,27 +56,51 @@ const orderSchema = new mongoose.Schema({
     paymentReference: {
         type: String,
     },
+    amountCustomerPaid: {
+        type: Number,
+    },
     orderStatus: {
         type: String,
         enum: [
-            'Pending',
-            'Payment Successful',
-            'Order Confirmed',
-            'Processing',
-            'Shipped',
-            'In Transit',
-            'Out for Delivery',
-            'Delivered',
-            'Cancelled',
-            'Refunded',
-            'Return Initiated',
-            'Return Completed'
+            'all order',
+            'pending',
+            'order confirmed',
+            'processing',
+            'shipped',
+            'in transit',
+            'out for delivery',
+            'delivered',
+            'cancelled',
+            'refunded',
+            'return initiated',
+            'return completed'
         ],
-        default: 'Pending'
+        default: 'pending'
     },
-    createdAt: {
-        type: Date
+
+    orderedItems: [{
+        productRef: { 
+            type: mongoose.Schema.Types.ObjectId, 
+            ref: 'products' // Reference to products collection
+        },
+        quantity: { 
+            type: Number, 
+            required: true 
+        },
+        price: { 
+            type: Number, 
+            required: true // Store current price for future reference
+        }
+    }],
+
+    appliedCouponCode: { // field for coupon code
+        type: String,
     },
+    
+    discountAmountApplied: { // field for discount amount from coupon
+        type: Number,
+        default: 0 // Default to 0 if no discount is applied
+    }
 
 }, { timestamps: true });
 

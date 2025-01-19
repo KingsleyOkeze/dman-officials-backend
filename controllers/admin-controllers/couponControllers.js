@@ -5,10 +5,17 @@ const fetchCouponsFunction = async (req, res) => {
 
     const page = req.query.page || 0;
     const numberOfCouponsToReturn = 7;
-
+    const discountType = req.query.discountType;
+    let query = {};
+    
+    console.log('fetch query is', discountType );
     try {
+        if (discountType && discountType !== "all types") {
+            query = { discountType: discountType }
+        }
+
         // Get the portions of the pagination requested
-        const allCoupons = await couponModel.find() 
+        const allCoupons = await couponModel.find(query) 
             .skip(page * numberOfCouponsToReturn)
             .limit(numberOfCouponsToReturn)
 
@@ -16,11 +23,6 @@ const fetchCouponsFunction = async (req, res) => {
             console.log("Failed fetching Coupons", error)
             return res.status(401).json({ error: "Failed to fetch all Coupons"})
         }
-
-        if (allCoupons.length === 0) {
-            return res.status(404).json({ error: "No record found!" });
-        }
-
 
         // Get the exact document count
         const totalCouponsCountInDb = await couponModel.countDocuments(); 
@@ -45,13 +47,12 @@ const addCouponFunction = async (req, res) => {
         couponCode,
         discountType,
         discountAmount,
-        minPurchaseAmount,
+        minimumPurchaseAmount,
         status,
         category,
         subCategory,
-        product,
         expirationDate,
-        // usageLimit,
+        usageLimit,
     } = req.body;
 
     try {
@@ -72,13 +73,12 @@ const addCouponFunction = async (req, res) => {
             couponCode,
             discountType,
             discountAmount,
-            minPurchaseAmount,
+            minimumPurchaseAmount,
             status,
             category,
             subCategory,
-            product,
             expirationDate,
-            // usageLimit,
+            usageLimit,
         });
 
         const saveCoupon = await newCoupon.save();
@@ -91,7 +91,7 @@ const addCouponFunction = async (req, res) => {
         return res.status(200).json({ message: "Coupon saved successfully!"});
 
     } catch (error) {
-        console.log("Internal Server Error!")
+        console.log("Internal Server Error!", error)
         return res.status(500).json({ error: "Internal Server Error!"});
     }
 
@@ -112,9 +112,8 @@ const editCouponFunction = async (req, res) => {
         status,
         category,
         subCategory,
-        product,
         expirationDate,
-        // usageLimit,
+        usageLimit,
     } = req.body;
 
     try {
@@ -139,9 +138,8 @@ const editCouponFunction = async (req, res) => {
             status,
             category,
             subCategory,
-            product,
             expirationDate,
-            // usageLimit,
+            usageLimit,
         };
 
         const updatedCoupon = await couponModel.findByIdAndUpdate(
@@ -158,7 +156,7 @@ const editCouponFunction = async (req, res) => {
         return res.status(200).json({ message: "Coupon saved successfully!"});
 
     } catch (error) {
-        console.log("Internal Server Error!")
+        console.log("Internal Server Error!", error)
         return res.status(500).json({ error: "Internal Server Error!"});
     }
 

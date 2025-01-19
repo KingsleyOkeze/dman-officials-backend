@@ -74,7 +74,8 @@ const fetchCartFunction = async (req, res) => {
       if (cartItems.length === 0) {
           return res.status(200).json({ message: "Cart is empty!", cart: [] });
       }
-console.log('fetch cart is', cartItems)
+
+      console.log('fetch cart is', cartItems);
       return res.status(200).json({ cart: cartItems });
   } catch (error) {
       return res.status(500).json({ error: "Internal Server Error!" });

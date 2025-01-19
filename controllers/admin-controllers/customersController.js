@@ -6,6 +6,7 @@ const fetchCustomersFunction = async (req, res) => {
     const page = req.query.page || 0;
     const numberOfCustomersToReturn = 7;
 
+
     try {
         // Get the portions of the pagination requested
         const allCustomers = await customerModel.find() 
@@ -16,11 +17,6 @@ const fetchCustomersFunction = async (req, res) => {
             console.log("Failed fetching Customers", error)
             return res.status(401).json({ error: "Failed to fetch all Customers"})
         }
-
-        if (allCustomers.length === 0) {
-            return res.status(404).json({ error: "No customers found" });
-        }
-
 
         // Get the exact document count
         const totalCustomersCountInDb = await customerModel.countDocuments(); 

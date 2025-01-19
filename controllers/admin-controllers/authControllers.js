@@ -59,6 +59,8 @@ const signupFunction = async (req, res) => {
 
         // Create new user and set verification token before saving
         const newUser = new adminModel({
+			firstName,
+			lastName,
             email,
             password: hashedPassword,
             role,
@@ -355,6 +357,7 @@ const resetPasswordFunction = async (req, res) => {
   
 
 
+
 // Logout Function
 const logoutFunction = (req, res) => {
     try {
@@ -376,6 +379,7 @@ const logoutFunction = (req, res) => {
         });
     }
 };
+
 
 
 

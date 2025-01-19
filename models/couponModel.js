@@ -7,12 +7,13 @@ const couponSchema = new mongoose.Schema({
     },
     couponCode: {
         type: String,
-        required: true
+        required: true,
+        unique: true,
     },
     status: {
         type: String,
         required: true, 
-        enum: ["Active", "Inactive", "Expired"], // Restricts to these statuses
+        enum: ["active", "inactive", "expired"], // Restricts to these statuses
     },
     category: {
         type: String
@@ -22,22 +23,33 @@ const couponSchema = new mongoose.Schema({
     },
     discountType: {
         type: String,
-        required: true
+        required: true,
+        enum: ["percentage off", "flat discount"]
     },
     discountAmount: {
-        type: String,
+        type: Number,
         required: true
     },
     minimumPurchaseAmount: {
-        type: Number
+        type: Number,
+        default: 0,
     },
     expirationDate: {
-        type: String,
+        type: Date,
         required: true
     },
-    // usageLimit: {
-    //     type: String
-    // },
+    usageLimit: { // Maximum times a coupon can be used
+        type: Number,
+        default: 15,
+    },
+    timesUsed: { // Track how many times this coupon has been used
+        type: Number,
+        default: 0,
+    },
+    usersUsed: [{ // Track which users have used this coupon
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'customers',
+    }],
     product: {
         type: String
     },
