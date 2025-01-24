@@ -15,11 +15,13 @@ const productSchema = new mongoose.Schema({
     },
     productCategory: {
         type: String,
-        required: true
+        required: true,
+        enum: ['MensWear', 'Accessories', 'Footwear'] 
     },
     productSubCategory: {
         type: String,
-        required: true
+        required: true,
+        enum: ['TShirt', 'Hoodie', 'SweatShirt', 'Bullup500'] 
     },
     productSize: {
         type: [String],
@@ -60,15 +62,25 @@ const productSchema = new mongoose.Schema({
     productStatus: {
         type: String,
         enum: [
-            'available', 
-            'limited stock',
-            'out of stock', 
-            'discontinued'
+            'Available', 
+            'LimitedStock',
+            'OutOfStock', 
+            'Discontinued',
         ], // Define the possible statuses
-        default: 'available' // Default status when a product is created
+        default: 'Available' // Default status when a product is created
     }
 
 }, { timestamps: true });
+
+
+// Indexing Strategy:
+productSchema.index({ 
+    productName: 1, 
+    productCategory: 1, 
+    productStatus: 1, 
+    productPrice: 1
+});
+
 
 const productModel = mongoose.model("products", productSchema);
 

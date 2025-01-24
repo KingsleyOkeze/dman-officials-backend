@@ -16,6 +16,7 @@ const fetchAllCustomerOrdersFunction = async (req, res) => {
         // Fetch all orders for the customer
         const orders = await orderModel
             .find({ customerRef: customerId }) // Use 'customerRef' as per your schema
+            .sort({ createdAt: -1 })
             .populate("orderedItems.productRef", "productName productImageUrl productPrice") // Adjust fields to match your product schema
             .sort({ createdAt: -1 }); // Sort by most recent orders
 
@@ -43,6 +44,7 @@ const fetchAllCustomerOrdersFunction = async (req, res) => {
         res.status(500).json({ error: "Internal Server Error!" });
     }
 };
+
 
 const fetchPurchasedOrderDetailsFunction = async (req, res) => {
     const { orderId } = req.params;
@@ -79,7 +81,6 @@ const fetchPurchasedOrderDetailsFunction = async (req, res) => {
 
 
 
-
 const placeOrderFunction = async (req, res) => {
     const {
         customerId,
@@ -95,7 +96,11 @@ const placeOrderFunction = async (req, res) => {
         appliedCouponCode, // Field for coupon code
     } = req.body;
 
-    console.log("log order to place", customerId,country,firstName,lastName,company,address,city,state,postalCode,phoneNumber)
+    console.log("log order to place", 
+        customerId,country,firstName,
+        lastName,company,address,city,
+        state,postalCode,phoneNumber,
+        appliedCouponCode)
     
     try {
         if (
@@ -135,23 +140,37 @@ const placeOrderFunction = async (req, res) => {
 
         // Query and validate coupon if applied
         let discount = 0;
+        let couponMessage;
         if (appliedCouponCode) {
             const coupon = await couponModel.findOne({ couponCode: appliedCouponCode });
+            
+            // To Avoid Timezone Confusion you want the expiration date
+            // to be compared strictly as a date (ignoring time):
+            const couponExpirationDate = new Date(coupon.expirationDate).setHours(0, 0, 0, 0);
+            const currentDate = new Date().setHours(0, 0, 0, 0);
+            
+            if (!coupon || coupon.status !== "Active" || couponExpirationDate < currentDate) {
+                discount = 0;
+                couponMessage = "The coupon code was invalid or expired, so no discount was applied.";
+                console.log("Invalid or expired coupon code!");
+                // return res.status(400).json({ error: "Invalid or expired coupon code!" });
+            } else {
 
-            if (!coupon || coupon.status !== "active" || new Date(coupon.expirationDate) < new Date()) {
-                return res.status(400).json({ error: "Invalid or expired coupon code!" });
+                if (cartTotalPurchase < coupon.minimumPurchaseAmount) {
+                    return res.status(403).json({
+                        error: `Minimum Purchase Amount of ₦${coupon.minimumPurchaseAmount} required to apply this coupon!`,
+                    });
+                }
+    
+                // Retrieve discount amount
+                discount = coupon.discountType === "percentage off"
+                    ? (cartTotalPurchase * coupon.discountAmount) / 100
+                    : coupon.discountAmount;
+
+                couponMessage = `A discount of ₦${discount} was applied using coupon code ${appliedCouponCode}.`;
+
             }
-
-            if (cartTotalPurchase < coupon.minimumPurchaseAmount) {
-                return res.status(403).json({
-                    error: `Minimum Purchase Amount of ₦${coupon.minimumPurchaseAmount} required to apply this coupon!`,
-                });
-            }
-
-            // Retrieve discount amount
-            discount = coupon.discountType === "percentage off"
-                ? (cartTotalPurchase * coupon.discountAmount) / 100
-                : coupon.discountAmount;
+    
         }
 
 
@@ -199,7 +218,8 @@ const placeOrderFunction = async (req, res) => {
         return res.status(201).json({ 
             message: "Successfully added order!", 
             savedOrder,
-            customerEmail: customer.email
+            customerEmail: customer.email,
+            note: couponMessage
         });
 
     } catch (error) {
@@ -213,9 +233,8 @@ const placeOrderFunction = async (req, res) => {
 
 
 
-
 module.exports = {
     fetchAllCustomerOrdersFunction,
     fetchPurchasedOrderDetailsFunction,
     placeOrderFunction 
-}
+};

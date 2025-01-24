@@ -3,42 +3,264 @@ const customerModel = require("../../models/customerModel");
 const productModel = require("../../models/productModel");
 const savedProductModel = require("../../models/savedProductModel");
 
-const fetchProductsFunction = async (req, res) => {
-    // const page = req.query.page || 0;
-    // const numberOfProductsToReturn = 7;
-
+const fetchFlashSaleProductFunction = async (req, res) => {
     try {
-      // Get the portions of the pagination requested
-      const allProducts = await productModel.find({})
-          // .skip(page * numberOfProductsToReturn)
-          // .limit(numberOfProductsToReturn)
+        // Get the current date and time
+        const currentDate = new Date();
 
-      if (!allProducts) {
-          console.log("Failed fetching orders", error)
-          return res.status(401).json({ error: "Failed to fetch all orders"})
-      }
+        // Fetch products with `addedTimer` set to true and check if `timerExpiryDate` has not expired
+        const flashSaleProducts = await productModel.find({
+            addedTimer: true,
+            timerExpiryDate: { $gt: currentDate } // Only products with expiry dates in the future
+        })
+        .sort({ createdAt: -1 }) // Sort by creation date (newest first)
+        .limit(6); // Limit to the latest 6 items
 
-      // if (allProducts.length === 0) {
-      //     return res.status(404).json({ error: "No orders found" });
-      // }
+        // Check if any products were found
+        if (flashSaleProducts.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: 'No active flash sale products available right now.',
+                flashSaleProducts: []
+            });
+        }
 
-      return res.status(200).json(allProducts)
-      // Get the exact document count
-      // const totalProductsCountInDb = await productModel.countDocuments(); 
-      // console.log("total document in db", totalProductsCountInDb);
-
-      // // Calculate the total number of pages
-      // const totalPages = Math.ceil(totalProductsCountInDb / numberOfProductsToReturn); 
-      // console.log("total pages", totalPages);
-
-      // return res.status(200).json({result: allProducts, totalPages, message: "Successfully fetched Orders!"});
-
+        // Return the 6 latest flash sale products
+        res.status(200).json({
+            success: true,
+            message: 'Flash sale products fetched successfully.',
+            result: flashSaleProducts
+        });
     } catch (error) {
-      console.log("Server Error fetching orders", error)
-      return res.status(500).json({ error: "Internal Server Error!"})
+        console.error('Error fetching flash sale products:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch flash sale products.',
+        });
     }
 };
 
+
+
+
+
+const fetchExploreProductsFunction = async (req, res) => {
+    const { page, limit  } = req.query; // Extract page and limit from req.query, with defaults
+
+    try {
+        // Fetch 3 random products from each category
+        const menWearProducts = await productModel
+            .aggregate([
+                { $match: { productCategory: 'MenWear' } }, // Filter category
+                { $sample: { size: 3 } } // Randomly select 3 documents
+            ]);
+
+        const footwearProducts = await productModel
+            .aggregate([
+                { $match: { productCategory: 'FootWear' } },
+                { $sample: { size: 3 } }
+            ]);
+        
+        // Combine all results into a single array
+        const exploreProducts = [
+            ...menWearProducts,
+            ...footwearProducts
+        ];
+
+        return res.status(200).json({
+            success: true,
+            message: 'Explore products fetched successfully.',
+            result: exploreProducts,
+        });
+    } catch (error) {
+        console.error('Error fetching explore products:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch explore products.',
+        });
+    }
+};
+
+
+
+
+
+const fetchTrendingNowProductFunction = async (req, res) => {
+    const { page, limit  } = req.query; // Extract page and limit from req.query, with defaults
+
+    try {
+        
+        const mensWearLatestProducts = await productModel
+            .find({ productCategory: 'MensWear' })
+            .sort({ createdAt: -1 })
+            .skip(page * limit)
+            .limit(limit);
+
+        const footwearLatestProducts = await productModel
+            .find({ productCategory: 'FootWear' })
+            .sort({ createdAt: -1 })
+            .skip(page * limit)
+            .limit(limit); 
+
+        let combinedProductCategories = [
+            ...mensWearLatestProducts, 
+            ...footwearLatestProducts
+        ];    
+
+        console.log("trending now products", combinedProductCategories)
+        return res.status(200).json({
+            result: combinedProductCategories, 
+            message: "Successfully fetched trending now products!"
+        });
+
+    } catch (error) {
+        console.log("Server Error fetching orders", error)
+        return res.status(500).json({ error: "Internal Server Error!"})
+    }
+}
+
+
+
+const searchProductFunction = async (req, res) => {
+    // Extract the search input from query
+    const { searchInput, limit, page, sortBy } = req.query;
+
+    try {
+    
+        // Default values for pagination
+        const itemsPerPage = parseInt(limit) || 12; // Default to 10 items per page
+        const currentPage = parseInt(page) || 0;
+        const skip = (currentPage) * itemsPerPage;
+
+        let sortOptions = {};  // Set default sorting options
+        
+        if (sortBy === 'latest') {
+            sortOptions = { createdAt: -1 };  // Sort by latest (descending)
+        } else if (sortBy === 'oldest') {
+            sortOptions = { createdAt: 1 };  // Sort by oldest (ascending)
+        }
+    
+        // Build the search filter
+        const filters = {};
+        if (searchInput) {
+            filters.$or = [
+              { productName: { $regex: searchInput, $options: "i" } }, // Case-insensitive match on product name
+              { productCategory: { $regex: searchInput, $options: "i" } }, // Case-insensitive match on category
+              { productSubCategory: { $regex: searchInput, $options: "i" } }  // Case-insensitive match on subcategory
+            ];
+        } 
+    
+        // Query the database
+        const products = await productModel.find(filters)
+          .sort(sortOptions)
+          .skip(skip)
+          .limit(itemsPerPage);
+    
+        // Count total products for pagination
+        const totalProducts = await productModel.countDocuments(filters);
+    
+        console.log('search result is', products);
+        // Send the results to the client
+        return res.status(200).json({
+          success: true,
+          result: products,
+          totalProducts,
+          totalPages: Math.ceil(totalProducts / itemsPerPage),
+          currentPage,
+        });
+      } catch (error) {
+        console.error("Error searching products:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+}
+
+
+const fetchProductsByCategoryFunction = async (req, res) => {
+    const { 
+        category, 
+        subCategory, 
+        sortBy,
+        page,
+        limit,
+        searchInput
+    } = req.query;  // Destructure the query parameters
+    console.log('category function called', category,  subCategory, sortBy, page, limit)
+    try {
+        // Let check if category is other category not defined in the
+        // enum of productCategory in our productModel e.g "TrendingNow"
+        // "NewArrival", "Explore" "FlashSale" "search" etc...
+        if (category === "TrendingNow") {
+             // Pass page and limit directly to fetchTrendingNowProductFunction
+             req.query.page = page; // Ensure the page value is in req.query
+             req.query.limit = limit; // Ensure the limit value is in req.query
+ 
+             // Call the function with req and res
+             return await fetchTrendingNowProductFunction(req, res);
+        }
+
+        if (category === "Explore") {
+            req.query.page = page; 
+            req.query.limit = limit;
+
+            return await fetchExploreProductsFunction(req, res);
+        }
+
+        if (category === "search") {
+            req.query.page = page; 
+            req.query.limit = limit;
+            req.query.sortBy = sortBy;
+            req.query.searchInput = searchInput;
+
+            // Call the function with req and res
+            return await searchProductFunction(req, res);
+       }
+
+        const query = {};  // Initialize the query filter
+        
+        // If a category is selected, add it to the filter
+        if (category) {
+            query.productCategory = category;
+        }
+
+        // Add subCategory filter if it exists
+        if (subCategory) {
+            query.productSubCategory = subCategory;
+        }
+
+
+        let sortOptions = {};  // Set default sorting options
+        
+        if (sortBy === 'latest') {
+            sortOptions = { createdAt: -1 };  // Sort by latest (descending)
+        } else if (sortBy === 'oldest') {
+            sortOptions = { createdAt: 1 };  // Sort by oldest (ascending)
+        }
+
+
+        // Fetch the products from MongoDB with the applied filters and sorting
+        const products = await productModel.find(query).sort(sortOptions);
+
+        // Get the exact document count
+        const totalProductsCountInDb = await productModel.countDocuments(); 
+        console.log("total document in db", totalProductsCountInDb);
+        const numberOfProductsToReturn = limit;
+
+        // Calculate the total number of pages
+        const totalPages = Math.ceil(totalProductsCountInDb / numberOfProductsToReturn); 
+        console.log("total pages for this product category", totalPages);
+
+        return res.status(200).json({
+            result: products, 
+            totalPages,
+            message: "Successfully fetched Orders!"
+        });
+
+    } catch (error) {
+        console.log("Server Error fetching orders", error)
+        return res.status(500).json({ error: "Internal Server Error!"})
+    }
+
+};
 
 
 
@@ -71,113 +293,11 @@ console.log('successfully fetch product details!', product)
 
 
 
-// --------------------------------------------------------- //
-
-
-
-const saveProductFunction = async (req, res) => {
-    const { customerId, productId } = req.body;
-    console.log('save product stuff', customerId, productId )
-    try {
-        // Validate input
-        if (!customerId) {
-            return res.status(400).json({ error: "Customer ID are required!" });
-        }
-
-        // Validate input
-        if (!productId) {
-            return res.status(400).json({ error: " Product ID are required!" });
-        }
-
-        // Check if the customer exists
-        const customer = await customerModel.findById(customerId); 
-        if (!customer) {
-            return res.status(404).json({ error: "Customer not found!" });
-        }
-
-        // Check if the product exists
-        const product = await productModel.findById(productId);
-        if (!product) {
-            return res.status(404).json({ error: "Product not found!" });
-        }
-
-        // Check if the product is already saved by the user
-        const productExist = await savedProductModel.findOne({ customerRef: customerId, productRef: productId });
-        if (productExist) {
-            return res.status(401).json({ error: "Product already saved!" });
-        } 
-
-        // Add new product to save
-        const newProductToSave = new savedProductModel({ customerRef: customerId, productRef: productId });
-        const savedProduct = await newProductToSave.save();
-        
-        if (!savedProduct) {
-          return res.status(401).json({ error: "Failed to save product!"})
-        }
-
-        // Fetch updated saved product
-        const updatedSavedProduct = await savedProductModel
-          .find({ customerRef: customerId })
-          .populate('productRef');
-        console.log("success save product!", updatedSavedProduct)
-        return res.status(201).json({ 
-          message: "Product saved successfully!", 
-          savedProducts: updatedSavedProduct
-        });
-    } catch (error) {
-      console.log('save product 500 err', error)
-      return res.status(500).json({ error: "Internal Server Error!" });
-    }
-};
-
-
-
-const removeFromSavedProductFunction = async (req, res) => {
-    const { customerId, itemId } = req.body;
-    console.log("remove saved product stuff", customerId, itemId)
-    try {
-        // Validate input
-        if (!customerId) {
-            return res.status(400).json({ error: "Customer ID are required!" });
-        }
-  
-        // Validate input
-        if (!itemId) {
-          return res.status(400).json({ error: "Product ID are required!" });
-        }
-  
-        // Remove the product from the Saved Products
-        const removedSavedItem = await savedProductModel.findOneAndDelete({ 
-          productRef: itemId,
-          customerRef: customerId, 
-        });
-  
-        if (!removedSavedItem) {
-          console.log("remove save stuff err", removedSavedItem)
-            return res.status(404).json({ error: "Product not found in cart!" });
-        }
-  
-        // Fetch updated cart
-        const updatedSavedProducts = await savedProductModel
-            .find({ customerRef: customerId })
-            .populate('productRef');
-  
-        return res.status(200).json({ 
-            message: "Product removed from Saved Product successfully!", 
-            savedProducts: updatedSavedProducts
-        });
-
-    } catch (error) {
-        console.error("Error removing from Saved Product:", error);
-        return res.status(500).json({ error: "Internal Server Error!" });
-    }
-};
-  
-  
-
 module.exports = {
-    fetchProductsFunction,
+    fetchProductsByCategoryFunction,
+    fetchFlashSaleProductFunction,
+    fetchExploreProductsFunction,
+    fetchTrendingNowProductFunction,
     fetchProductDetailsFunction,
-    saveProductFunction,
-    removeFromSavedProductFunction
+    searchProductFunction
 };

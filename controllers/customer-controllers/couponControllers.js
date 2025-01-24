@@ -5,7 +5,7 @@ const customerModel = require("../../models/customerModel");
 
 const validateCouponFunction = async (req, res) => {
     const { customerId, couponCode } = req.body;
-console.log('called validate coupon')
+console.log('called validate coupon');
     try { 
         if (!customerId) {
             return res.status(400).json({ error: "Failed to identify User!" });
@@ -18,13 +18,18 @@ console.log('called validate coupon')
         }
 
         const coupon = await couponModel.findOne({ couponCode });
+
+        // To Avoid Timezone Confusion you want the expiration date
+        // to be compared strictly as a date (ignoring time):
+        const couponExpirationDate = new Date(coupon.expirationDate).setHours(0, 0, 0, 0);
+        const currentDate = new Date().setHours(0, 0, 0, 0);
         
-        if (!coupon || coupon.status !== "active") { // Ensure status is "Active"
+        if (!coupon || coupon.status !== "Active") { // Ensure status is "Active"
             return res.status(400).json({ isValid: false, error: "Invalid coupon code!" });
         }
 
         // Check if the coupon has expired
-        if (new Date(coupon.expirationDate) < new Date()) {
+        if (couponExpirationDate < currentDate) {
             return res.status(403).json({ isValid: false, error: "Coupon has expired!" });
         }
 
@@ -58,9 +63,9 @@ console.log('called validate coupon')
 
         // Calculate discount
         let discount = 0;
-        if (coupon.discountType === "percentage off") {
+        if (coupon.discountType === "PercentageOff") {
             discount = (orderAmount * coupon.discountAmount) / 100;
-        } else if (coupon.discountType === "flat discount") {
+        } else if (coupon.discountType === "FlatDiscount") {
             discount = coupon.discountAmount;
         }
 
@@ -88,4 +93,4 @@ console.log('called validate coupon')
 
 module.exports = {
     validateCouponFunction
-}
+};

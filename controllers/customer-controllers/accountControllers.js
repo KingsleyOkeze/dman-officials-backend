@@ -148,6 +148,7 @@ const fetchSavedProductFunction = async (req, res) => {
         // Fetch cart items with product details
         const savedProducts = await savedProductModel
             .find({ customerRef: customerId })
+            .sort({ createdAt: -1 })
             .populate('productRef');
   
         if (savedProducts.length === 0) {
@@ -168,6 +169,105 @@ const fetchSavedProductFunction = async (req, res) => {
 
 
 
+  const saveProductFunction = async (req, res) => {
+    const { customerId, productId } = req.body;
+    console.log('save product stuff', customerId, productId )
+    try {
+        // Validate input
+        if (!customerId) {
+            return res.status(400).json({ error: "Customer ID are required!" });
+        }
+
+        // Validate input
+        if (!productId) {
+            return res.status(400).json({ error: " Product ID are required!" });
+        }
+
+        // Check if the customer exists
+        const customer = await customerModel.findById(customerId); 
+        if (!customer) {
+            return res.status(404).json({ error: "Customer not found!" });
+        }
+
+        // Check if the product exists
+        const product = await productModel.findById(productId);
+        if (!product) {
+            return res.status(404).json({ error: "Product not found!" });
+        }
+
+        // Check if the product is already saved by the user
+        const productExist = await savedProductModel.findOne({ customerRef: customerId, productRef: productId });
+        if (productExist) {
+            return res.status(401).json({ error: "Product already saved!" });
+        } 
+
+        // Add new product to save
+        const newProductToSave = new savedProductModel({ customerRef: customerId, productRef: productId });
+        const savedProduct = await newProductToSave.save();
+        
+        if (!savedProduct) {
+          return res.status(401).json({ error: "Failed to save product!"})
+        }
+
+        // Fetch updated saved product
+        const updatedSavedProduct = await savedProductModel
+          .find({ customerRef: customerId })
+          .populate('productRef');
+        console.log("success save product!", updatedSavedProduct)
+        return res.status(201).json({ 
+          message: "Product saved successfully!", 
+          savedProducts: updatedSavedProduct
+        });
+    } catch (error) {
+      console.log('save product 500 err', error)
+      return res.status(500).json({ error: "Internal Server Error!" });
+    }
+};
+
+
+
+const removeFromSavedProductFunction = async (req, res) => {
+    const { customerId, itemId } = req.body;
+    console.log("remove saved product stuff", customerId, itemId)
+    try {
+        // Validate input
+        if (!customerId) {
+            return res.status(400).json({ error: "Customer ID are required!" });
+        }
+  
+        // Validate input
+        if (!itemId) {
+          return res.status(400).json({ error: "Product ID are required!" });
+        }
+  
+        // Remove the product from the Saved Products
+        const removedSavedItem = await savedProductModel.findOneAndDelete({ 
+          productRef: itemId,
+          customerRef: customerId, 
+        });
+  
+        if (!removedSavedItem) {
+          console.log("remove save stuff err", removedSavedItem)
+            return res.status(404).json({ error: "Product not found in cart!" });
+        }
+  
+        // Fetch updated cart
+        const updatedSavedProducts = await savedProductModel
+            .find({ customerRef: customerId })
+            .populate('productRef');
+  
+        return res.status(200).json({ 
+            message: "Product removed from Saved Product successfully!", 
+            savedProducts: updatedSavedProducts
+        });
+
+    } catch (error) {
+        console.error("Error removing from Saved Product:", error);
+        return res.status(500).json({ error: "Internal Server Error!" });
+    }
+};
+  
+  
 
 
 module.exports = {
@@ -175,4 +275,6 @@ module.exports = {
     updateCustomerDetailsFunction,
     updateCustomerAccountPassword,
     fetchSavedProductFunction,
+    saveProductFunction,
+    removeFromSavedProductFunction
 };

@@ -13,7 +13,7 @@ const couponSchema = new mongoose.Schema({
     status: {
         type: String,
         required: true, 
-        enum: ["active", "inactive", "expired"], // Restricts to these statuses
+        enum: ["Active", "Inactive", "Expired"], // Restricts to these statuses
     },
     category: {
         type: String
@@ -24,7 +24,7 @@ const couponSchema = new mongoose.Schema({
     discountType: {
         type: String,
         required: true,
-        enum: ["percentage off", "flat discount"]
+        enum: ["PercentageOff", "FlatDiscount"]
     },
     discountAmount: {
         type: Number,

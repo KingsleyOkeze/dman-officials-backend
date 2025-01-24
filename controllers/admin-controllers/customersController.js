@@ -10,6 +10,7 @@ const fetchCustomersFunction = async (req, res) => {
     try {
         // Get the portions of the pagination requested
         const allCustomers = await customerModel.find() 
+            .sort({ createdAt: -1 })
             .skip(page * numberOfCustomersToReturn)
             .limit(numberOfCustomersToReturn)
 

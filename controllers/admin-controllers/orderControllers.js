@@ -17,6 +17,7 @@ const fetchOrdersFunction = async (req, res) => {
         
         // Get the portions of the pagination requested
         const allOrders = await orderModel.find(query)
+            .sort({ createdAt: -1 })
             .populate("customerRef")
             .skip(page * numberOfItemsToReturn)
             .limit(numberOfItemsToReturn)

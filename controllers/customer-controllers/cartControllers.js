@@ -3,6 +3,72 @@ const cartModel = require("../../models/cartModel");
 const customerModel = require("../../models/customerModel");
 const productModel = require("../../models/productModel");
 
+
+const fetchCartFunction = async (req, res) => {
+    const { customerId } = req.body;
+  
+    try {
+        // Validate input
+        if (!customerId) {
+            return res.status(400).json({ error: "Customer ID is required!" });
+        }
+  
+        // Fetch cart items with product details
+        const cartItems = await cartModel
+            .find({ customerRef: customerId })
+            .sort({ createdAt: -1 })
+            .populate('productRef');
+  
+        if (cartItems.length === 0) {
+            return res.status(200).json({ message: "Cart is empty!", cart: [] });
+        }
+  
+        // console.log('fetch cart is', cartItems);
+        return res.status(200).json({ cart: cartItems });
+    } catch (error) {
+        return res.status(500).json({ error: "Internal Server Error!" });
+    }
+};
+  
+
+
+const fetchCartTotalPrice = async (req, res) => {
+    const { customerId } = req.body;
+
+    try {
+        if (!customerId) {
+            return res.status(400).json({ error: "Failed to identify User!"});
+        }
+
+        const customer = await customerModel.findById(customerId);
+
+        if (!customer) {
+            return res.status(404).json({ error: "User doesn't exist!"})
+        }
+
+        const cartItems = await cartModel
+            .find({ customerRef: customerId })
+            .populate('productRef');
+
+        let totalPrice = 0;
+
+        for (let i = 0; i < cartItems.length; i++) {
+            const item = cartItems[i];
+            totalPrice += item.productRef.productOfferPrice * item.quantity
+        }
+
+        // console.log('cart total price is', totalPrice)
+
+        return res.status(200).json({ message: "Cart total price calculated", totalPrice });
+
+    } catch (error) {
+        console.error("Failed to calculate cart total price", error);
+        return res.status(500).json({ error: "Internal Server Error!"});
+    }
+
+};
+
+
 const addToCartFunction = async (req, res) => {
   const { customerId, productId, quantity } = req.body;
   console.log('cart stuff', customerId, productId, quantity )
@@ -46,8 +112,10 @@ const addToCartFunction = async (req, res) => {
           .find({ customerRef: customerId })
           .populate('productRef');
 
+      console.log("Item added to cart!");
+      
       return res.status(201).json({ 
-          message: "Product added to cart successfully!", 
+          message: "Item added to cart!", 
           cart: updatedCart 
       });
   } catch (error) {
@@ -57,30 +125,51 @@ const addToCartFunction = async (req, res) => {
 };
 
 
-const fetchCartFunction = async (req, res) => {
-  const { customerId } = req.body;
 
-  try {
-      // Validate input
-      if (!customerId) {
-          return res.status(400).json({ error: "Customer ID is required!" });
-      }
+const updateQuantityFunction = async (req, res) => {
+    const { customerId, itemId, quantity } = req.body;
 
-      // Fetch cart items with product details
-      const cartItems = await cartModel
-          .find({ customerRef: customerId })
-          .populate('productRef');
+    console.log('cart item quantity', customerId, itemId, quantity )
+    // Validate request payload
+    if (!customerId || !itemId || quantity < 1) {
+        return res.status(400).json({ error: "Invalid input data" });
+    }
 
-      if (cartItems.length === 0) {
-          return res.status(200).json({ message: "Cart is empty!", cart: [] });
-      }
+    try {
+        // Find the customer by ID
+        const customer = await customerModel.findById(customerId);
+        if (!customer) {
+            return res.status(404).json({ error: "Customer not found!" });
+        }
 
-      console.log('fetch cart is', cartItems);
-      return res.status(200).json({ cart: cartItems });
-  } catch (error) {
-      return res.status(500).json({ error: "Internal Server Error!" });
-  }
+        // Check if the item exists in the customer's cart
+        // const itemIndex = customer.cart.findIndex(
+        //     (cartItem) => cartItem.itemId.toString() === itemId
+        // );
+        const item = await cartModel.findById(itemId);
+
+
+        if (!item) {
+            return res.status(404).json({ error: "Item not found in cart!" });
+        }
+
+        // Update the quantity of the item in the cart
+        item.quantity = quantity;
+
+        // Save the updated item in cart
+        await item.save();
+        console.log("Cart updated successfully", item)
+        return res.status(200).json({ 
+            message: "Cart updated successfully", 
+            cart: item
+        });
+    } catch (err) {
+        console.error("Error updating cart:", err);
+        res.status(500).json({ error: "An error occurred while updating the cart" });
+    }
+
 };
+
 
 
 
@@ -126,45 +215,9 @@ const removeFromCartFunction = async (req, res) => {
 };
 
 
-const fetchCartTotalPrice = async (req, res) => {
-    const { customerId } = req.body;
-
-    try {
-        if (!customerId) {
-            return res.status(400).json({ error: "Failed to identify User!"});
-        }
-
-        const customer = await customerModel.findById(customerId);
-
-        if (!customer) {
-            return res.status(404).json({ error: "User doesn't exist!"})
-        }
-
-        const cartItems = await cartModel
-            .find({ customerRef: customerId })
-            .populate('productRef');
-
-        let totalPrice = 0;
-
-        for (let i = 0; i < cartItems.length; i++) {
-            const item = cartItems[i];
-            totalPrice += item.productRef.productOfferPrice * item.quantity
-        }
-
-        console.log('cart total price is', totalPrice)
-
-        return res.status(200).json({ message: "Cart total price calculated", totalPrice });
-
-    } catch (error) {
-        console.error("Failed to calculate cart total price", error);
-        return res.status(500).json({ error: "Internal Server Error!"});
-    }
-
-};
-
-
 module.exports = {
     addToCartFunction,
+    updateQuantityFunction,
     fetchCartFunction,
     removeFromCartFunction,
     fetchCartTotalPrice

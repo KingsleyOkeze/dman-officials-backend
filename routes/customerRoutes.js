@@ -10,13 +10,16 @@ const {
     logoutFunction
 } = require("../controllers/customer-controllers/authControllers");
 const { 
-    fetchProductsFunction,
-    saveProductFunction,
-    removeFromSavedProductFunction,
-    fetchProductDetailsFunction, 
+    fetchProductsByCategoryFunction,
+    fetchProductDetailsFunction,
+    fetchFlashSaleProductFunction,
+    fetchExploreProductsFunction,
+    fetchTrendingNowProductFunction,
+    searchProductFunction, 
 } = require("../controllers/customer-controllers/productControllers");
 const { 
     addToCartFunction, 
+    updateQuantityFunction,
     fetchCartFunction,
     removeFromCartFunction,
     fetchCartTotalPrice
@@ -36,6 +39,8 @@ const {
     updateCustomerDetailsFunction, 
     updateCustomerAccountPassword,
     fetchSavedProductFunction,
+    saveProductFunction,
+    removeFromSavedProductFunction,
 } = require("../controllers/customer-controllers/accountControllers");
 
 
@@ -48,10 +53,14 @@ router.post("/forget-password", forgotPasswordFunction);
 router.post("/reset-password", resetPasswordFunction);
 router.post("/logout", logoutFunction);
 
-
-router.get("/fetch-products", fetchProductsFunction);
-
+// PRODUCT ROUTER
+router.get("/fetch-products", fetchProductsByCategoryFunction);
+router.get("/flash-sale-products", fetchFlashSaleProductFunction);
+router.get("/fetch-explore-products", fetchExploreProductsFunction);
 router.get("/fetch-product-details/:productId", fetchProductDetailsFunction);
+router.get("/fetch-trending-now-products", fetchTrendingNowProductFunction);
+
+router.get("/search-product", searchProductFunction);
 
 // ACCOUNT ROUTES
 router.post("/fetch-all-customer-orders", fetchAllCustomerOrdersFunction)
@@ -68,6 +77,7 @@ router.post("/remove-from-saved-product", removeFromSavedProductFunction);
 // CART ROUTER
 router.post("/fetch-cart", fetchCartFunction);
 router.post("/add-to-cart", addToCartFunction);
+router.post("/update-cart", updateQuantityFunction)
 router.post("/remove-from-cart", removeFromCartFunction);
 router.post("/fetch-cart-total-price", fetchCartTotalPrice);
 router.post("/place-order", placeOrderFunction);

@@ -11,6 +11,7 @@ const fetchProductsFunction = async (req, res) => {
     try {
       // Get the portions of the pagination requested
       const allProducts = await productModel.find()
+          .sort({ createdAt: -1 })
           .skip(page * numberOfProductsToReturn)
           .limit(numberOfProductsToReturn)
 
@@ -331,7 +332,8 @@ const fetchProductByIdFunction = async (req, res) => {
     const { productId } = req.params; // Extract the product ID from the route parameter
 
     try {
-        const product = await productModel.findById(productId); // Fetch the product using Mongoose
+        const product = await productModel.findById(productId) // Fetch the product using Mongoose
+            
         if (!product) {
             return res.status(404).json({ error: 'Product not found' });
         }

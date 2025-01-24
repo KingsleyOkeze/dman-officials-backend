@@ -16,6 +16,7 @@ const fetchCouponsFunction = async (req, res) => {
 
         // Get the portions of the pagination requested
         const allCoupons = await couponModel.find(query) 
+            .sort({ createdAt: -1 })
             .skip(page * numberOfCouponsToReturn)
             .limit(numberOfCouponsToReturn)
 

@@ -5,7 +5,7 @@ const fetchHomePageProductStatusesFunction = async (req, res) => {
     
     console.log('called home product statuses');
     try {
-        const allProducts = await productModel.find({});
+        const allProducts = await productModel.find({})
 
         if (!allProducts) {
             return res.status(401).json({ error: "Couldn't fetch product record!"})
