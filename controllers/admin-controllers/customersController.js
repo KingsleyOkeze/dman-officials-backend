@@ -1,5 +1,8 @@
 // ADMIN CUSTOMER CONTROLLERS
+const cartModel = require("../../models/cartModel");
 const customerModel = require("../../models/customerModel");
+const orderModel = require("../../models/orderModel");
+const savedProductModel = require("../../models/savedProductModel");
 
 const fetchCustomersFunction = async (req, res) => {
 
@@ -38,10 +41,41 @@ const fetchCustomersFunction = async (req, res) => {
 
 
 
+const deleteCustomerAccountFunction = async (req, res) => {
+    const { customerId } = req.params;
+
+    try {
+        // Check if customerId is provided
+        if (!customerId) {
+            return res.status(400).json({ error: "Customer ID is required!" });
+        }
+
+        // Find the customer to ensure they exist
+        const customer = await customerModel.findById(customerId);
+        if (!customer) {
+            return res.status(404).json({ error: "Customer not found!" });
+        }
+
+        // Delete associated data
+        await orderModel.deleteMany({ customerRef: customerId });
+        await cartModel.deleteMany({ customerRef: customerId });
+        await savedProductModel.deleteMany({ customerRef: customerId });
+
+        // Delete the customer record
+        await customerModel.findByIdAndDelete(customerId);
+
+        // Success response
+        return res.status(200).json({ message: "Customer account and all associated data deleted successfully!" });
+    } catch (error) {
+        console.error("Error deleting customer account:", error);
+        return res.status(500).json({ error: "Internal Server Error!" });
+    }
+};
 
 
 
 module.exports = {
-    fetchCustomersFunction
+    fetchCustomersFunction,
+    deleteCustomerAccountFunction
 };
   

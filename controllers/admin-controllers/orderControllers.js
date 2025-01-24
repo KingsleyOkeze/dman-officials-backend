@@ -120,8 +120,44 @@ const updateOrderStatusFunction = async (req, res) => {
 };
 
 
+
+
+const deleteOrderFunction = async (req, res) => {
+    const { orderId } = req.params; // Extract orderId from route parameters
+
+    try {
+        // Validate that an order ID was provided
+        if (!orderId) {
+            return res.status(400).json({ error: "Order ID is required!" });
+        }
+
+        // Find the order by ID and delete it
+        const deletedOrder = await orderModel.findByIdAndDelete(orderId);
+
+        // Check if the order was found and deleted
+        if (!deletedOrder) {
+            return res.status(404).json({ error: "Order not found or already deleted!" });
+        }
+
+        console.log("Order deleted successfully!");
+        return res.status(200).json({
+            message: "Order deleted successfully!",
+            deletedOrder,
+        });
+    } catch (error) {
+        console.error("Error deleting order:", error);
+        return res.status(500).json({ error: "Internal Server Error!" });
+    }
+};
+
+
+
+
+
+
 module.exports = {
     fetchOrdersFunction,
     fetchOrderDetailsFunction,
-    updateOrderStatusFunction 
+    updateOrderStatusFunction,
+    deleteOrderFunction
 };

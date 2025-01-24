@@ -189,6 +189,33 @@ const fetchCouponByIdFunction = async (req, res) => {
 
 
 
+const deleteCouponFunction = async (req, res) => {
+    const { couponId } = req.params; 
+
+    try {
+        // Check if the coupon ID is provided
+        if (!couponId) {
+            return res.status(400).json({ error: "Coupon ID is required!" });
+        }
+
+        // Find and delete the coupon from the database
+        const deletedCoupon = await couponModel.findByIdAndDelete(couponId);
+
+        // Check if the coupon was found and deleted
+        if (!deletedCoupon) {
+            return res.status(404).json({ error: "Coupon not found or already deleted!" });
+        }
+        console.log('coupon deleted successfully!')
+        // Successfully deleted
+        return res.status(200).json({
+            message: "Coupon deleted successfully!",
+            deletedCoupon,
+        });
+    } catch (error) {
+        console.error("Error deleting coupon:", error);
+        return res.status(500).json({ error: "Internal Server Error!" });
+    }
+};
 
 
 
@@ -197,5 +224,6 @@ module.exports = {
     fetchCouponsFunction,
     addCouponFunction,
     editCouponFunction,
-    fetchCouponByIdFunction
+    fetchCouponByIdFunction,
+    deleteCouponFunction
 }
