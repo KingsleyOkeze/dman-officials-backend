@@ -10,7 +10,7 @@ const fetchCouponsFunction = async (req, res) => {
     
     console.log('fetch query is', discountType );
     try {
-        if (discountType && discountType !== "all types") {
+        if (discountType && discountType !== "AllTypes") {
             query = { discountType: discountType }
         }
 

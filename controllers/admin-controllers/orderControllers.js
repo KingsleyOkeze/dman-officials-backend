@@ -1,5 +1,4 @@
 // ADMIN ORDER CONTROLLERS
-const cartModel = require("../../models/cartModel");
 const orderModel = require("../../models/orderModel"); 
 
 const fetchOrdersFunction = async (req, res) => {
@@ -11,9 +10,9 @@ const fetchOrdersFunction = async (req, res) => {
     
     console.log('fetch query is', orderStatus );
     try {
-        if (orderStatus && orderStatus !== "all orders") {
+        if (orderStatus && orderStatus !== "AllOrders") {
             query = { orderStatus: orderStatus }
-        }
+        } 
         
         // Get the portions of the pagination requested
         const allOrders = await orderModel.find(query)
@@ -28,12 +27,12 @@ const fetchOrdersFunction = async (req, res) => {
         }
 
         if (allOrders.length === 0) {
-            return res.status(404).json({ error: "No orders found" });
+            return res.status(200).json({ message: "No orders found!" });
         }
 
 
         // Get the exact document count
-        const totalOrderCountInDb = await orderModel.countDocuments(); 
+        const totalOrderCountInDb = await orderModel.countDocuments(query); 
         console.log("total document in db", totalOrderCountInDb);
 
         // Calculate the total number of pages
@@ -47,7 +46,6 @@ const fetchOrdersFunction = async (req, res) => {
         return res.status(500).json({ error: "Internal Server Error!"})
     }
 }
-
 
 
 

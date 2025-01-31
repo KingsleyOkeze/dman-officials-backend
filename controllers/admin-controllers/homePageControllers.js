@@ -40,11 +40,11 @@ const fetchHomePageOrderStatusesFunction = async (req, res) => {
             return res.status(401).json({ error: "Couldn't fetch home page order status!"})
         }
 
-        const pendingOrders = allOrders.filter((order) => order.orderStatus === "pending");
-        const processingOrders = allOrders.filter((order) => order.orderStatus === "processing");
-        const cancelledOrders = allOrders.filter((order) => order.orderStatus === "cancelled");
-        const shippedOrders = allOrders.filter((order) => order.orderStatus === "shipped");
-        const deliveredOrders = allOrders.filter((order) => order.orderStatus === "delivered");
+        const pendingOrders = allOrders.filter((order) => order.orderStatus === "Pending");
+        const processingOrders = allOrders.filter((order) => order.orderStatus === "Processing");
+        const cancelledOrders = allOrders.filter((order) => order.orderStatus === "Cancelled");
+        const shippedOrders = allOrders.filter((order) => order.orderStatus === "Shipped");
+        const deliveredOrders = allOrders.filter((order) => order.orderStatus === "Delivered");
        
         return res.status(200).json({
             message: "Successfully fetched dashboard order statuses!",

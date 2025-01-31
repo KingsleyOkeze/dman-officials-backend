@@ -50,7 +50,7 @@ const orderSchema = new mongoose.Schema({
     },
     paymentStatus: {
         type: String,
-        default: 'pending', //Default payment status
+        default: 'Pending', //Default payment status
         required: true
     },
     paymentReference: {
@@ -62,20 +62,13 @@ const orderSchema = new mongoose.Schema({
     orderStatus: {
         type: String,
         enum: [
-            'all order',
-            'pending',
-            'order confirmed',
-            'processing',
-            'shipped',
-            'in transit',
-            'out for delivery',
-            'delivered',
-            'cancelled',
-            'refunded',
-            'return initiated',
-            'return completed'
+            'Pending',
+            'Processing',
+            'Shipped',
+            'Delivered',
+            'Cancelled',
         ],
-        default: 'pending'
+        default: 'Pending'
     },
 
     orderedItems: [{

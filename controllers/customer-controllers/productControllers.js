@@ -1,9 +1,9 @@
 // CUSTOMER PRODUCT CONTROLLERS
-const customerModel = require("../../models/customerModel");
 const productModel = require("../../models/productModel");
-const savedProductModel = require("../../models/savedProductModel");
 
 const fetchFlashSaleProductFunction = async (req, res) => {
+    const { page = 0, limit = 6 } = req.query; // Extract page and limit from req.query, with defaults
+
     try {
         // Get the current date and time
         const currentDate = new Date();
@@ -14,7 +14,10 @@ const fetchFlashSaleProductFunction = async (req, res) => {
             timerExpiryDate: { $gt: currentDate } // Only products with expiry dates in the future
         })
         .sort({ createdAt: -1 }) // Sort by creation date (newest first)
-        .limit(6); // Limit to the latest 6 items
+        .skip(page * limit)
+        .limit(limit); // Limit to the limit value
+
+        console.log("stuff on sale", flashSaleProducts);
 
         // Check if any products were found
         if (flashSaleProducts.length === 0) {
@@ -25,17 +28,16 @@ const fetchFlashSaleProductFunction = async (req, res) => {
             });
         }
 
-        // Return the 6 latest flash sale products
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: 'Flash sale products fetched successfully.',
             result: flashSaleProducts
         });
     } catch (error) {
         console.error('Error fetching flash sale products:', error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
-            message: 'Failed to fetch flash sale products.',
+            error: 'Failed to fetch flash sale products.',
         });
     }
 };
@@ -45,7 +47,7 @@ const fetchFlashSaleProductFunction = async (req, res) => {
 
 
 const fetchExploreProductsFunction = async (req, res) => {
-    const { page, limit  } = req.query; // Extract page and limit from req.query, with defaults
+    const { page = 0, limit = 6 } = req.query; // Extract page and limit from req.query, with defaults
 
     try {
         // Fetch 3 random products from each category
@@ -86,7 +88,7 @@ const fetchExploreProductsFunction = async (req, res) => {
 
 
 const fetchTrendingNowProductFunction = async (req, res) => {
-    const { page, limit  } = req.query; // Extract page and limit from req.query, with defaults
+    const { page = 0, limit = 6 } = req.query; // Extract page and limit from req.query, with defaults
 
     try {
         
@@ -94,7 +96,7 @@ const fetchTrendingNowProductFunction = async (req, res) => {
             .find({ productCategory: 'MensWear' })
             .sort({ createdAt: -1 })
             .skip(page * limit)
-            .limit(limit);
+            .limit(limit); 
 
         const footwearLatestProducts = await productModel
             .find({ productCategory: 'FootWear' })
@@ -107,7 +109,7 @@ const fetchTrendingNowProductFunction = async (req, res) => {
             ...footwearLatestProducts
         ];    
 
-        console.log("trending now products", combinedProductCategories)
+        // console.log("trending now products", combinedProductCategories)
         return res.status(200).json({
             result: combinedProductCategories, 
             message: "Successfully fetched trending now products!"
@@ -128,7 +130,7 @@ const searchProductFunction = async (req, res) => {
     try {
     
         // Default values for pagination
-        const itemsPerPage = parseInt(limit) || 12; // Default to 10 items per page
+        const itemsPerPage = parseInt(limit) || 12; // Default to 12 items per page
         const currentPage = parseInt(page) || 0;
         const skip = (currentPage) * itemsPerPage;
 
@@ -180,8 +182,8 @@ const fetchProductsByCategoryFunction = async (req, res) => {
         category, 
         subCategory, 
         sortBy,
-        page,
-        limit,
+        page = 0,
+        limit = 12,
         searchInput
     } = req.query;  // Destructure the query parameters
     console.log('category function called', category,  subCategory, sortBy, page, limit)
@@ -203,6 +205,13 @@ const fetchProductsByCategoryFunction = async (req, res) => {
             req.query.limit = limit;
 
             return await fetchExploreProductsFunction(req, res);
+        }
+
+        if (category === "Sale") {
+            req.query.page = page; 
+            req.query.limit = limit;
+
+            return await fetchFlashSaleProductFunction(req, res);
         }
 
         if (category === "search") {
@@ -279,7 +288,7 @@ const fetchProductDetailsFunction = async (req, res) => {
         if (!product) {
             return res.status(404).json({ error: "Product not found!" });
         }
-console.log('successfully fetch product details!', product)
+// console.log('successfully fetch product details!', product)
         return res.status(200).json({
             message: 'Successfully fetched product details!',
             result: product

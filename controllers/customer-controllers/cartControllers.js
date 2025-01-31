@@ -2,10 +2,10 @@
 const cartModel = require("../../models/cartModel");
 const customerModel = require("../../models/customerModel");
 const productModel = require("../../models/productModel");
-
+const orderModel = require("../../models/orderModel");
 
 const fetchCartFunction = async (req, res) => {
-    const { customerId } = req.body;
+    const { customerId } = req.query;
   
     try {
         // Validate input
@@ -32,8 +32,8 @@ const fetchCartFunction = async (req, res) => {
   
 
 
-const fetchCartTotalPrice = async (req, res) => {
-    const { customerId } = req.body;
+const fetchCartTotalPriceFunction = async (req, res) => {
+    const { customerId } = req.query;
 
     try {
         if (!customerId) {
@@ -129,7 +129,7 @@ const addToCartFunction = async (req, res) => {
 const updateQuantityFunction = async (req, res) => {
     const { customerId, itemId, quantity } = req.body;
 
-    console.log('cart item quantity', customerId, itemId, quantity )
+    console.log('cart item quantity', customerId, itemId, quantity)
     // Validate request payload
     if (!customerId || !itemId || quantity < 1) {
         return res.status(400).json({ error: "Invalid input data" });
@@ -148,7 +148,6 @@ const updateQuantityFunction = async (req, res) => {
         // );
         const item = await cartModel.findById(itemId);
 
-
         if (!item) {
             return res.status(404).json({ error: "Item not found in cart!" });
         }
@@ -159,9 +158,13 @@ const updateQuantityFunction = async (req, res) => {
         // Save the updated item in cart
         await item.save();
         console.log("Cart updated successfully", item)
+
+        // Fetch the full updated cart for the customer
+        const updatedCart = await cartModel.find({ customerId });
+
         return res.status(200).json({ 
             message: "Cart updated successfully", 
-            cart: item
+            cart: updatedCart
         });
     } catch (err) {
         console.error("Error updating cart:", err);
@@ -169,7 +172,6 @@ const updateQuantityFunction = async (req, res) => {
     }
 
 };
-
 
 
 
@@ -215,10 +217,162 @@ const removeFromCartFunction = async (req, res) => {
 };
 
 
+
+const placeOrderFunction = async (req, res) => {
+    const {
+        customerId,
+        country,
+        firstName,
+        lastName,
+        company,
+        address,
+        city,
+        state,
+        postalCode,
+        phoneNumber,
+        appliedCouponCode, // Field for coupon code
+    } = req.body;
+
+    console.log("log order to place", 
+        customerId,country,firstName,
+        lastName,company,address,city,
+        state,postalCode,phoneNumber,
+        appliedCouponCode)
+    
+    try {
+        if (
+            !customerId,
+            !country,
+            !firstName,
+            !lastName,
+            !address,
+            !city,
+            !state,
+            !phoneNumber
+        ) {
+            return res.status(404).json({ error: "Please fill up the necessay details!"});
+        }
+
+        const customer = await customerModel.findOne({ _id: customerId });
+
+        if (!customer) {
+            return res.status(404).json({ error: "User doesn't exist!"});
+        }
+
+        // FETCH CART ITEMS FOR CUSTOMER AND CALCULATE TOTAL PRICE
+        const cartItems = await cartModel
+            .find({ customerRef: customerId })
+            .populate('productRef');
+           
+        let cartTotalPurchase = 0;
+
+        for (let i = 0; i < cartItems.length; i++) {
+            const item = cartItems[i];
+            cartTotalPurchase += item.productRef.productOfferPrice * item.quantity
+        }
+
+        console.log('cart total price is', cartTotalPurchase);
+
+        const shippingCost = 1000;
+
+        // Query and validate coupon if applied
+        let discount = 0;
+        let couponMessage;
+        if (appliedCouponCode) {
+            const coupon = await couponModel.findOne({ couponCode: appliedCouponCode });
+            
+            // To Avoid Timezone Confusion you want the expiration date
+            // to be compared strictly as a date (ignoring time):
+            const couponExpirationDate = new Date(coupon.expirationDate).setHours(0, 0, 0, 0);
+            const currentDate = new Date().setHours(0, 0, 0, 0);
+            
+            if (!coupon || coupon.status !== "Active" || couponExpirationDate < currentDate) {
+                discount = 0;
+                couponMessage = "The coupon code was invalid or expired, so no discount was applied.";
+                console.log("Invalid or expired coupon code!");
+                // return res.status(400).json({ error: "Invalid or expired coupon code!" });
+            } else {
+
+                if (cartTotalPurchase < coupon.minimumPurchaseAmount) {
+                    return res.status(403).json({
+                        error: `Minimum Purchase Amount of ₦${coupon.minimumPurchaseAmount} required to apply this coupon!`,
+                    });
+                }
+    
+                // Retrieve discount amount
+                discount = coupon.discountType === "percentage off"
+                    ? (cartTotalPurchase * coupon.discountAmount) / 100
+                    : coupon.discountAmount;
+
+                couponMessage = `A discount of ₦${discount} was applied using coupon code ${appliedCouponCode}.`;
+
+            }
+    
+        }
+
+
+        // Calculate final total
+        const finalTotal = Math.max(cartTotalPurchase - discount + shippingCost, 0);
+
+
+        // STORE A REFERENCE OF AN ITEMS IN CUSTOMER CART INTO 
+        // THE ORDER MODEL BEFORE DELETING THE CUSTOMER CART
+        const orderedItems = cartItems.map(item => {
+            return {
+                customerRef: item.customerRef, // Retain customer reference
+                productRef: item.productRef._id, // Store product reference
+                quantity: item.quantity, // Store quantity
+                price: item.productRef.productOfferPrice // Store current price for future reference
+            };
+        });
+
+        // Create a new order with ordered items from the cart
+        const newOrder = new orderModel({
+            customerRef: customerId,
+            country,
+            firstName,
+            lastName,
+            company,
+            address,
+            city,
+            state,
+            postalCode,
+            phoneNumber,
+            orderTotalAmount: finalTotal,
+            orderedItems, // Save detailed ordered items with prices
+            appliedCouponCode, // Save the applied coupon code
+            discountAmountApplied: discount // Save the discount amount from the coupon if exist
+        });
+
+        const savedOrder = await newOrder.save();
+
+        if (!savedOrder) {
+            return res.status(401).json({ error: "Failed to place order!"});
+        }
+
+        console.log("Successfully added order!", savedOrder);
+
+        return res.status(201).json({ 
+            message: "Successfully added order!", 
+            savedOrder,
+            customerEmail: customer.email,
+            note: couponMessage
+        });
+
+    } catch (error) {
+        console.log("500 err placing order", error);
+        return res.status(500).json({ error: "Internal Server Error!"});
+    }
+
+};
+
+
+
 module.exports = {
     addToCartFunction,
     updateQuantityFunction,
     fetchCartFunction,
     removeFromCartFunction,
-    fetchCartTotalPrice
+    fetchCartTotalPriceFunction,
+    placeOrderFunction 
 };

@@ -62,7 +62,7 @@ const signupFunction = async (req, res) => {
 			return res.status(401).json({ error: 'User already exist.' });
 		}
 
-		const role = 'customer';
+		const role = 'Customer';
 
 		const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -272,7 +272,7 @@ const loginFunction = async (req, res) => {
 		// Sign JWT tokens
 		const accessToken = jwt.sign(
 			{
-			  id: user._id,
+			  userId: user._id,
 			  role: user.role,
 			},
 			accessTokenSecret,
@@ -281,7 +281,7 @@ const loginFunction = async (req, res) => {
 	  
 		  const refreshToken = jwt.sign(
 			{
-			  id: user._id,
+			  userId: user._id,
 			  role: user.role,
 			},
 			refreshTokenSecret,
@@ -380,6 +380,32 @@ const resetPasswordFunction = async (req, res) => {
 
 
 
+
+const refereshTokenFunction = async (req, res) => {
+	const refreshToken = req.cookies.refreshToken; // Refresh token from HTTP-only cookie
+  
+	// Log cookies for debugging
+    console.log("Cookies:", req.cookies);
+	console.log("Refresh Token:", refreshToken);
+
+	if (!refreshToken) {
+	  return res.status(401).json({ error: 'No refresh token provided' });
+	}
+  
+	const decoded = jwt.verify(refreshToken, refreshTokenSecret);
+
+	if (!decoded) {
+		return res.status(401).json({ error: 'Invalid or expired refresh token' });
+    }
+
+	// Issue a new access token
+	const newAccessToken = jwt.sign({ userId: decoded.userId }, accessTokenSecret, { expiresIn: '15m' });
+	return res.json({ accessToken: newAccessToken });
+
+};
+
+
+
 // Logout Function
 const logoutFunction = (req, res) => {
     try {
@@ -412,5 +438,6 @@ module.exports = {
 	resendSignUpVerificationEmailFunction,
 	forgotPasswordFunction,
 	resetPasswordFunction,
+	refereshTokenFunction,
 	logoutFunction
 }

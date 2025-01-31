@@ -1,22 +1,49 @@
 const customerModel = require("../../models/customerModel");
 const bcrypt = require('bcrypt');
 const savedProductModel = require("../../models/savedProductModel");
+const orderModel = require("../../models/orderModel");
+const productModel = require("../../models/productModel");
 
 const fetchCustomerDetailsFunction = async (req, res) => {
-    const { customerId } = req.body; 
+    const { customerId } = req.query; 
 
     try {
         // Find the customer by ID and exclude the password field
-        const customer = await customerModel
+        const customerProfile = await customerModel
             .findById(customerId)
             .select('country dob email firstName lastName gender phoneNumber role'); // Use .select() to select field you want to send
 
-        if (!customer) {
+        if (!customerProfile) {
             return res.status(404).json({ error: "User not found!" });
         }
 
+        // Fetch customer address details if based on if they have 
+        // place an order on the platfor before
+        const fetchedCustomerAddress = await orderModel
+            .findOne({ customerRef: customerId })
+            .sort({ createdAt: -1 })
+            .select('address city state postalCode');
+
+        let customerAddress = {}
+        if (!fetchedCustomerAddress) {
+            customerAddress = {}
+        } else {
+            customerAddress = fetchedCustomerAddress
+        }
+
+        
+
+        const customer = {
+            ...customerProfile.toObject(), // Convert Mongoose document to a plain object
+            address: fetchedCustomerAddress || null, // Use null if no address is found
+        };  
+
+
         // Return user details without the password
-        return res.status(200).json({ message: "Customer details fetched successfully", customer });
+        return res.status(200).json({ 
+            message: "Customer details fetched successfully", 
+            customer 
+        });
         
     } catch (error) {
         console.error("Error fetching customer details:", error);
@@ -137,8 +164,10 @@ const updateCustomerAccountPassword = async (req, res) => {
 
 
 const fetchSavedProductFunction = async (req, res) => {
-    const { customerId } = req.body;
-  
+    const page = req.query.page || 0;
+    const limit = req.query.limit || 5;
+    const customerId = req.query;
+  console.log("saved product fetch call", page, limit, customerId)
     try {
         // Validate input
         if (!customerId) {
@@ -148,7 +177,9 @@ const fetchSavedProductFunction = async (req, res) => {
         // Fetch cart items with product details
         const savedProducts = await savedProductModel
             .find({ customerRef: customerId })
-            .sort({ createdAt: -1 })
+            .sort({ createdAt: -1 }) // Sort by most recent orders
+            .skip(page * limit)
+            .limit(limit)
             .populate('productRef');
   
         if (savedProducts.length === 0) {
@@ -157,7 +188,19 @@ const fetchSavedProductFunction = async (req, res) => {
   
   console.log('fetch savedProducts is', savedProducts);
   
-        return res.status(200).json({savedProducts: savedProducts});
+        // Get the exact document count
+        const totalSavedProductsCountInDb = await savedProductModel.countDocuments(); 
+        console.log("total document in db", totalSavedProductsCountInDb);
+        const numberOfSavedProductsToReturn = limit;
+
+        // Calculate the total number of pages
+        const totalPages = Math.ceil(totalSavedProductsCountInDb / numberOfSavedProductsToReturn); 
+        console.log("total pages for this product category", totalPages);
+
+        return res.status(200).json({
+            savedProducts: savedProducts,
+            totalPages
+        });
   
     } catch (error) {
         return res.status(500).json({ error: "Internal Server Error!" });
@@ -169,7 +212,7 @@ const fetchSavedProductFunction = async (req, res) => {
 
 
 
-  const saveProductFunction = async (req, res) => {
+const saveProductFunction = async (req, res) => {
     const { customerId, productId } = req.body;
     console.log('save product stuff', customerId, productId )
     try {
@@ -270,11 +313,108 @@ const removeFromSavedProductFunction = async (req, res) => {
   
 
 
+
+
+const fetchAllCustomerOrdersFunction = async (req, res) => {
+    const page = req.query.page || 0;
+    const limit = req.query.limit || 5;
+    const { customerId } = req.query;
+console.log('feetching customer order info', page, limit, customerId)
+    try {
+        if (!customerId) {
+            return res.status(401).json({ error: "Unauthorized access!" });
+        }
+
+        // Fetch all orders for the customer
+        const orders = await orderModel
+            .find({ customerRef: customerId }) // Use 'customerRef' as per your schema
+            .sort({ createdAt: -1 }) // Sort by most recent orders
+            .skip(page * limit)
+            .limit(limit)
+            .populate("orderedItems.productRef", "productName productImageUrl productPrice") // Adjust fields to match your product schema
+            
+       
+        // Transform orders to match client-side requirements
+        const result = orders.map((order) => ({
+            orderId: order._id,
+            name: order.orderedItems
+                .map((item) => item?.productRef?.productName || "Unnamed product")
+                .join(", "),
+            image: order.orderedItems[0]?.productRef?.productImageUrl?.[0] || null, // Fallback for missing images
+            status: order.orderStatus || "Unknown", // Ensure status always has a value
+            deliveryDate: order.deliveryDate || "Not specified", // Add this field in your schema if required
+        }));
+
+        // Log and send response
+        console.log("All customer orders fetched successfully", result);
+
+        // Get the exact document count
+        const totalOrdersCountInDb = await orderModel.countDocuments(); 
+        console.log("total document in db", totalOrdersCountInDb);
+        const numberOfOrdersToReturn = limit;
+
+        // Calculate the total number of pages
+        const totalPages = Math.ceil(totalOrdersCountInDb / numberOfOrdersToReturn); 
+        console.log("total pages for this product category", totalPages);
+
+        return res.status(200).json({ 
+            message: "All customer orders fetched successfully", 
+            result,
+            totalPages
+        });
+
+    } catch (error) {
+        console.error("Error fetching customer orders:", error);
+        res.status(500).json({ error: "Internal Server Error!" });
+    }
+};
+
+
+const fetchPurchasedOrderDetailsFunction = async (req, res) => {
+    const { orderId } = req.params;
+    const { customerId } = req.query;
+    console.log('called customer fetch order details')
+    try {
+        if (!customerId) {
+            return res.status(400).json({ error: "Couldn't identify user!"})
+        }
+
+        if (!orderId) {
+            return res.status(400).json({ error: "Couldn't identify order!"})
+        }
+
+        const order = await orderModel
+            .findById(orderId)
+            .populate("orderedItems.productRef"); // Populate product details for each ordered item
+
+        if (!order) {
+            return res.status(404).json({ error: "Order not found!"});
+        }
+
+        console.log("Order fetched successfully!", order);
+
+        return res.status(200).json({
+            message: "Order fetched successfully!",
+            order
+        });
+    } catch (error) {
+        console.log( "Internal Server Error!", error);
+        return res.status(500).json({ error: "Internal Server Error!"});
+    }
+}
+
+
+
+
+
+
 module.exports = {
     fetchCustomerDetailsFunction,
     updateCustomerDetailsFunction,
     updateCustomerAccountPassword,
     fetchSavedProductFunction,
     saveProductFunction,
-    removeFromSavedProductFunction
+    removeFromSavedProductFunction,
+    fetchAllCustomerOrdersFunction,
+    fetchPurchasedOrderDetailsFunction,
 };

@@ -36,8 +36,8 @@ const customerSchema = new mongoose.Schema({
     role: {
         type: String,
         required: true,
-        enum: ["admin", "customer"], // Only these two roles
-        default: "customer", // Default to "customer" if no role is provided
+        enum: ["Customer"], // Only these role
+        default: "Customer", // Default to "customer" if no role is provided
     },
     
     verificationToken: {

@@ -16,7 +16,7 @@ const productSchema = new mongoose.Schema({
     productCategory: {
         type: String,
         required: true,
-        enum: ['MensWear', 'Accessories', 'Footwear'] 
+        enum: ['MensWear', 'Accessories', 'FootWear'] 
     },
     productSubCategory: {
         type: String,
@@ -25,7 +25,8 @@ const productSchema = new mongoose.Schema({
     },
     productSize: {
         type: [String],
-        required: true
+        required: true,
+        enum: ['Small', 'Medium', 'Large', 'Extra Large']
     },
     productColor: {
         type: [String], // Array of strings (e.g., color names or hex codes)
@@ -51,7 +52,7 @@ const productSchema = new mongoose.Schema({
         type: Boolean, 
         default: false 
     },
-    timerExpires: {
+    timerExpired: {
         type: Boolean,
         default: false
     },
@@ -66,6 +67,7 @@ const productSchema = new mongoose.Schema({
             'LimitedStock',
             'OutOfStock', 
             'Discontinued',
+            'SaleEnded'
         ], // Define the possible statuses
         default: 'Available' // Default status when a product is created
     }

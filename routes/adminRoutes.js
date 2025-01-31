@@ -6,6 +6,7 @@ const {
     verifySignUpEmailFunction,
     forgotPasswordFunction,
     resetPasswordFunction,
+    refereshTokenFunction,
     logoutFunction
 } = require("../controllers/admin-controllers/authControllers");
 const { 
@@ -39,6 +40,9 @@ const {
     fetchHomePageProductStatusesFunction 
 } = require("../controllers/admin-controllers/homePageControllers");
 
+const adminAuth = require("../middlewares/adminAuth");
+
+
 const router = express.Router();
 
 router.post("/sign-up", signupFunction);
@@ -47,7 +51,11 @@ router.post("/verify-sign-up-email/:token", verifySignUpEmailFunction);
 router.post("/resend-sign-up-email-verification/:userId", resendSignUpVerificationEmailFunction);
 router.post("/forget-password", forgotPasswordFunction);
 router.post("/reset-password", resetPasswordFunction);
+router.post("/refresh-token", refereshTokenFunction);
 router.post("/logout", logoutFunction);
+
+// Protected routes (authentication required)
+router.use(adminAuth); // Apply adminAuth middleware to all routes below
 
 // DASHBOARD ROUTER 
 router.get("/fetch-home-page-product-statuses", fetchHomePageProductStatusesFunction);

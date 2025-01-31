@@ -7,6 +7,7 @@ const {
     verifySignUpEmailFunction,
     forgotPasswordFunction,
     resetPasswordFunction,
+    refereshTokenFunction,
     logoutFunction
 } = require("../controllers/customer-controllers/authControllers");
 const { 
@@ -22,7 +23,8 @@ const {
     updateQuantityFunction,
     fetchCartFunction,
     removeFromCartFunction,
-    fetchCartTotalPrice
+    fetchCartTotalPriceFunction,
+    placeOrderFunction
 } = require("../controllers/customer-controllers/cartControllers");
 const { 
     // initializeTransactionFunction, 
@@ -30,19 +32,16 @@ const {
 } = require("../controllers/customer-controllers/paymentControllers");
 const { validateCouponFunction } = require("../controllers/customer-controllers/couponControllers");
 const { 
-    placeOrderFunction, 
-    fetchPurchasedOrderDetailsFunction,
-    fetchAllCustomerOrdersFunction 
-} = require("../controllers/customer-controllers/orderControllers");
-const { 
     fetchCustomerDetailsFunction, 
     updateCustomerDetailsFunction, 
     updateCustomerAccountPassword,
     fetchSavedProductFunction,
     saveProductFunction,
     removeFromSavedProductFunction,
+    fetchPurchasedOrderDetailsFunction,
+    fetchAllCustomerOrdersFunction 
 } = require("../controllers/customer-controllers/accountControllers");
-
+const customerAuth = require("../middlewares/customerAuth");
 
 // AUTH ROUTER
 router.post("/sign-up", signupFunction);
@@ -51,6 +50,7 @@ router.post("/verify-sign-up-email/:token", verifySignUpEmailFunction);
 router.post("/resend-sign-up-email-verification/:userId", resendSignUpVerificationEmailFunction);
 router.post("/forget-password", forgotPasswordFunction);
 router.post("/reset-password", resetPasswordFunction);
+router.post("/refresh-token", refereshTokenFunction);
 router.post("/logout", logoutFunction);
 
 // PRODUCT ROUTER
@@ -63,33 +63,33 @@ router.get("/fetch-trending-now-products", fetchTrendingNowProductFunction);
 router.get("/search-product", searchProductFunction);
 
 // ACCOUNT ROUTES
-router.post("/fetch-all-customer-orders", fetchAllCustomerOrdersFunction)
-router.post("/fetch-customer-details", fetchCustomerDetailsFunction);
-router.post("/update-customer-details", updateCustomerDetailsFunction);
-router.post("/update-account-password", updateCustomerAccountPassword);
+router.get("/fetch-customer-details", customerAuth, fetchCustomerDetailsFunction);
+router.post("/update-customer-details", customerAuth, updateCustomerDetailsFunction);
+router.post("/update-account-password", customerAuth, updateCustomerAccountPassword);
+router.get("/fetch-all-customer-orders", customerAuth, fetchAllCustomerOrdersFunction);
+router.get("/fetch-purchased-order-details/:orderId", customerAuth, fetchPurchasedOrderDetailsFunction);
 
 
 // SAVED PRODUCT ROUTER
-router.post("/fetch-saved-product", fetchSavedProductFunction);
-router.post("/save-product", saveProductFunction);
-router.post("/remove-from-saved-product", removeFromSavedProductFunction); 
+router.get("/fetch-saved-product", customerAuth, fetchSavedProductFunction);
+router.post("/save-product", customerAuth, saveProductFunction);
+router.post("/remove-from-saved-product", customerAuth, removeFromSavedProductFunction); 
+
 
 // CART ROUTER
-router.post("/fetch-cart", fetchCartFunction);
-router.post("/add-to-cart", addToCartFunction);
-router.post("/update-cart", updateQuantityFunction)
-router.post("/remove-from-cart", removeFromCartFunction);
-router.post("/fetch-cart-total-price", fetchCartTotalPrice);
-router.post("/place-order", placeOrderFunction);
+router.get("/fetch-cart", customerAuth, fetchCartFunction);
+router.post("/add-to-cart", customerAuth, addToCartFunction);
+router.post("/update-cart", customerAuth, updateQuantityFunction)
+router.post("/remove-from-cart", customerAuth, removeFromCartFunction);
+router.get("/fetch-cart-total-price", customerAuth, fetchCartTotalPriceFunction);
+router.post("/place-order", customerAuth, placeOrderFunction);
 
 // ORDER ROUTER
-router.post("/fetch-all-customer-orders", fetchAllCustomerOrdersFunction);
-router.post("/fetch-purchased-order-details/:orderId", fetchPurchasedOrderDetailsFunction);
 
 // COUPON ROUTER
-router.post("/validate-coupon", validateCouponFunction);
+router.post("/validate-coupon", customerAuth, validateCouponFunction);
 
 // PAYMENT ROUTER
-router.post("/verify-transaction", verifyTransactionFunction);
+router.post("/verify-transaction", customerAuth, verifyTransactionFunction);
 
 module.exports = router;

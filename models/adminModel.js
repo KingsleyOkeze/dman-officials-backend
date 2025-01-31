@@ -22,8 +22,8 @@ const adminSchema = new mongoose.Schema(
 		role: {
             type: String,
             required: true,
-            enum: ["admin"], // Only these two roles
-            default: "admin", // Default to "admin" if no role is provided
+            enum: ["Admin"], // Only these two roles
+            default: "Admin", // Default to "admin" if no role is provided
         },
 		
 		verificationToken: {

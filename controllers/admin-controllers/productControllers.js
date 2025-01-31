@@ -6,7 +6,7 @@ const productModel = require("../../models/productModel");
 
 const fetchProductsFunction = async (req, res) => {
     const page = req.query.page || 0;
-    const numberOfProductsToReturn = 7;
+    const numberOfProductsToReturn = req.query.limit || 7;
 
     try {
       // Get the portions of the pagination requested
@@ -28,7 +28,11 @@ const fetchProductsFunction = async (req, res) => {
       const totalPages = Math.ceil(totalProductsCountInDb / numberOfProductsToReturn); 
       console.log("total pages", totalPages);
 
-      return res.status(200).json({result: allProducts, totalPages, message: "Successfully fetched Orders!"});
+      return res.status(200).json({
+        result: allProducts, 
+        totalPages, 
+        message: "Successfully fetched Orders!"
+      });
 
     } catch (error) {
       console.log("Server Error fetching orders", error)
