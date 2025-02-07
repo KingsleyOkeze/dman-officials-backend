@@ -42,6 +42,7 @@ const {
     fetchAllCustomerOrdersFunction 
 } = require("../controllers/customer-controllers/accountControllers");
 const customerAuth = require("../middlewares/customerAuth");
+const { trackTabActivityFunction } = require("../controllers/customer-controllers/activityControllers");
 
 // AUTH ROUTER
 router.post("/sign-up", signupFunction);
@@ -52,6 +53,10 @@ router.post("/forget-password", forgotPasswordFunction);
 router.post("/reset-password", resetPasswordFunction);
 router.post("/refresh-token", refereshTokenFunction);
 router.post("/logout", logoutFunction);
+
+// ACTIVITY ROUTER
+router.post("/activity", trackTabActivityFunction);
+
 
 // PRODUCT ROUTER
 router.get("/fetch-products", fetchProductsByCategoryFunction);

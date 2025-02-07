@@ -1,6 +1,52 @@
 const orderModel = require("../../models/orderModel");
 const productModel = require("../../models/productModel");
 
+
+const searchProductFunction = async (req, res) => {
+    // Extract the search input from query
+    const { searchInput, limit, page,  } = req.query;
+  
+    try {
+        // Default values for pagination
+        const itemsPerPage = parseInt(limit) || 12; // Default to 12 items per page
+        const currentPage = parseInt(page) || 0;
+        const skip = (currentPage) * itemsPerPage;
+    
+        // Build the search filter
+        const filters = {};
+        if (searchInput) {
+            filters.$or = [
+              { productName: { $regex: searchInput, $options: "i" } }, // Case-insensitive match on product name
+              { productCategory: { $regex: searchInput, $options: "i" } }, // Case-insensitive match on category
+              { productSubCategory: { $regex: searchInput, $options: "i" } }  // Case-insensitive match on subcategory
+            ];
+        } 
+    
+        // Query the database
+        const products = await productModel.find(filters)
+          .sort({createdAt: -1})
+          .skip(skip)
+          .limit(itemsPerPage);
+    
+        // Count total products for pagination
+        const totalProducts = await productModel.countDocuments(filters);
+    
+        console.log('search result is', products);
+        // Send the results to the client
+        return res.status(200).json({
+          success: true,
+          result: products,
+          totalProducts,
+          searchTotalPages: Math.ceil(totalProducts / itemsPerPage),
+          currentPage,
+        });
+      } catch (error) {
+        console.error("Error searching products:", error);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
+
 const fetchHomePageProductStatusesFunction = async (req, res) => {
     
     console.log('called home product statuses');
@@ -67,6 +113,7 @@ const fetchHomePageOrderStatusesFunction = async (req, res) => {
 
 
 module.exports = {
+    searchProductFunction,
     fetchHomePageProductStatusesFunction,
     fetchHomePageOrderStatusesFunction
 }

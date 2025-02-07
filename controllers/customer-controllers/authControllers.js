@@ -14,6 +14,7 @@ const {
 	isValidEmail,
 	// isValidPhoneNumber
 } = require("../../config/config");
+const activityLogsModel = require('../../models/activityLogsModel');
 
 
 // Sign up function
@@ -213,7 +214,7 @@ console.log('usr', userId)
 
 // LOGIN FUNCTION
 const loginFunction = async (req, res) => {
-	const { email, password } = req.body;
+	const { email, password, ip } = req.body;
 
 	console.log("Login details", email, password);
 	try {
@@ -268,6 +269,13 @@ const loginFunction = async (req, res) => {
 		
 		
 		}
+
+		// Log login activity directly inside after user successfully login.
+        await activityLogsModel.create({
+            customerRef: user._id,
+			ipAddress: ip,
+            activityType: "Login",
+        });
 
 		// Sign JWT tokens
 		const accessToken = jwt.sign(
@@ -407,8 +415,11 @@ const refereshTokenFunction = async (req, res) => {
 
 
 // Logout Function
-const logoutFunction = (req, res) => {
-    try {
+const logoutFunction = async (req, res) => {
+	const { customerId, activity, sessionDuration, ip } = req.body;
+	console.log('logout extra details', customerId, activity, sessionDuration, ip);
+        
+	try {
         // Clear the refreshToken cookie
         res.clearCookie("refreshToken", {
             httpOnly: true,
@@ -416,7 +427,16 @@ const logoutFunction = (req, res) => {
             sameSite: "None", // Adjust based on your frontend setup
         });
 
-        console.log("User logged out successfully.");
+		// Save logout customer activity
+        await activityLogsModel.create({
+            customerRef: customerId,
+            activityType: activity || "Logout", // Default to "logout"
+            sessionDuration: sessionDuration || 0, // Ensure session duration is set
+            ipAddress: ip || "Unknown", // Handle missing IP gracefully
+        });
+
+		console.log(`User ${customerId} logged out after ${sessionDuration} sec time.`);
+        // console.log(`User ${customerId} logged out successfully.`);
         return res.status(200).json({
             message: "Logged out successfully",
         });

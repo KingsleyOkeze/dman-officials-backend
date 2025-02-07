@@ -14,6 +14,12 @@ const adminSchema = new mongoose.Schema(
 			type: String,
 			required: true,
 		},
+		phoneNumber: {
+			type: String,
+			// type: String,
+			// required: true, 
+			// match: /^\+?\d{7,15}$/, // Validates international phone number format
+		},
 		password: {
 			type: String,
 			required: true,

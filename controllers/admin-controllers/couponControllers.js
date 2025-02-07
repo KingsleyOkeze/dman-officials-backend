@@ -26,7 +26,7 @@ const fetchCouponsFunction = async (req, res) => {
         }
 
         // Get the exact document count
-        const totalCouponsCountInDb = await couponModel.countDocuments(); 
+        const totalCouponsCountInDb = await couponModel.countDocuments(query); 
         console.log("total document in db", totalCouponsCountInDb);
 
         // Calculate the total number of pages

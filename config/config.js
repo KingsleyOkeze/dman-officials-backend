@@ -1,5 +1,6 @@
 require('dotenv').config();
 const bcrypt = require('bcrypt');
+
 const jwt_secret = process.env.JWT_SECRET_KEY;
 const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
 const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET;

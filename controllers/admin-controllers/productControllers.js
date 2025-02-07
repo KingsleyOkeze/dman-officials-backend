@@ -378,10 +378,11 @@ const deleteProductFunction = async (req, res) => {
 
 
 
+
 module.exports = {
     fetchProductsFunction,
     fetchProductByIdFunction,
     addProductFunction,
     editProductFunction,
-    deleteProductFunction
+    deleteProductFunction,
 };

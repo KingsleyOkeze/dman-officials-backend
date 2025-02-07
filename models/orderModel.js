@@ -56,6 +56,9 @@ const orderSchema = new mongoose.Schema({
     paymentReference: {
         type: String,
     },
+    paymentMethod: {
+        type: String, // e.g., 'card', 'bank', 'ussd'
+    },
     amountCustomerPaid: {
         type: Number,
     },

@@ -17,9 +17,9 @@ const {
 
 // Sign up function
 const signupFunction = async (req, res) => {
-	const { firstName, lastName, email, password } = req.body;
+	const { firstName, lastName, email, phoneNumber, password } = req.body;
 
-	console.log('sign up info is', firstName, lastName, email, password);
+	console.log('sign up info is', firstName, lastName, email, phoneNumber, password);
 
 	try {
 		if (!email || !password) {
@@ -62,6 +62,7 @@ const signupFunction = async (req, res) => {
 			firstName,
 			lastName,
             email,
+            phoneNumber,
             password: hashedPassword,
             role,
             verificationToken, // Set token here

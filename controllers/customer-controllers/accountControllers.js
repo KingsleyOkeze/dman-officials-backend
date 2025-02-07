@@ -166,8 +166,8 @@ const updateCustomerAccountPassword = async (req, res) => {
 const fetchSavedProductFunction = async (req, res) => {
     const page = req.query.page || 0;
     const limit = req.query.limit || 5;
-    const customerId = req.query;
-  console.log("saved product fetch call", page, limit, customerId)
+    const customerId = req.query.customerId;
+    console.log("saved product fetch call", page, limit, customerId);
     try {
         // Validate input
         if (!customerId) {
@@ -180,7 +180,7 @@ const fetchSavedProductFunction = async (req, res) => {
             .sort({ createdAt: -1 }) // Sort by most recent orders
             .skip(page * limit)
             .limit(limit)
-            .populate('productRef');
+            .populate('productRef', '_id productName productImageUrl productSize productColor productOfferPrice');
   
         if (savedProducts.length === 0) {
             return res.status(200).json({ message: "Saved products is empty!", savedProducts });
@@ -203,6 +203,7 @@ const fetchSavedProductFunction = async (req, res) => {
         });
   
     } catch (error) {
+        console.log('error fetching saved product', error)
         return res.status(500).json({ error: "Internal Server Error!" });
     }
   };
