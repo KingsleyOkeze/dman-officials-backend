@@ -26,11 +26,11 @@ const productSchema = new mongoose.Schema({
     productSize: {
         type: [String],
         required: true,
-        enum: ['Small', 'Medium', 'Large', 'Extra Large']
+        enum: ['S', 'M', 'L', 'XL']
     },
     productColor: {
         type: [String], // Array of strings (e.g., color names or hex codes)
-        required: true
+        required: true,
     },    
     productBrand: {
         type: String,
@@ -59,7 +59,6 @@ const productSchema = new mongoose.Schema({
     timerExpiryDate: {
         type: Date,
     },
-
     productStatus: {
         type: String,
         enum: [

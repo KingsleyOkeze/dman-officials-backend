@@ -1,6 +1,7 @@
 // CUSTOMER PAYMENT CONTROLLERS
 require("dotenv").config();
 const https = require('https');
+const { compileEmailTemplate } = require('../../helpers/emailTemplateHelper');
 const emailingFunction = require("../../helpers/emailingFunction");
 const orderModel = require("../../models/orderModel");
 const cartModel = require("../../models/cartModel");
@@ -45,53 +46,59 @@ const verifyTransactionFunction = async (req, res) => {
             console.log('response on verify transaction', parsedData);
             const amountCharged = parsedData.data.amount; // Get the amount from parsedData
 
+            const order = await orderModel.findById(orderId);
+            if (!order) return res.status(404).json({ error: "Order not found!" });
+
+            // Convert Order total amount which is in naira to kobo (for paystack sake)
+            const orderTotalAmountInKobo = order.orderTotalAmount * 100;  //Multiply by 100 
+
+            //Confirm if the charged amount doesn't match the expected order amount
+            if (amountCharged && orderTotalAmountInKobo !== amountCharged) {
+                // Mark payment as PaymentMismatch and notify
+                order.paymentStatus = "PaymentMismatch";
+                order.amountCustomerPaid = parseInt(amountCharged);
+                order.paymentReference = reference;
+                await order.save();
+
+                // Compile and send payment mismatch email
+                const mismatchEmailData = {
+                    logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+                    title: 'Payment Mismatch Detected',
+                    message: `
+                        The amount charged does not match your order total. 
+                        Our team is reviewing this issue. Please contact 
+                        support if you have any questions.
+                        `,
+                    reference: reference,
+                    expectedAmount: order.orderTotalAmount,
+                    amountCharged: (amountCharged / 100).toFixed(2)
+                };
+                const mismatchEmailHtml = compileEmailTemplate('paymentMismatch', mismatchEmailData);
+
+                // Send email to customer and optionally notify support/admin.
+                emailingFunction(customerEmail, 'Payment Mismatch - DMAN E-commerce', mismatchEmailHtml);
+                
+                // Respond with a clear error to the user
+                return res.status(200).json({
+                    status: "PaymentMismatch",
+                    message: `
+                        Payment amount does not match the Order total. 
+                        Our team is reviewing this.
+                        `,
+                    details: { 
+                        orderTotalAmount: order.orderTotalAmount, 
+                        amountCharged, 
+                    }
+                })
+            }
+
             // Transaction is verified successfully do this:
             if (parsedData.status && parsedData.data.status === "success") {
-                //Confirm if the money paid is same as Order total amount.
-                const order = await orderModel.findById(orderId);
-
-                if (!order) return res.status(404).json({ error: "Order not found!" });
-
-                // Convert Order total amount which is in naira to kobo (for paystack sake)
-                const orderTotalAmountInKobo = order.orderTotalAmount * 100;  //Multiply by 100
-
-                if (orderTotalAmountInKobo !== amountCharged) {
-                    // Mark payment as payment mismatch and notify
-                    order.paymentStatus = "payment mismatch";
-                    order.amountCustomerPaid = parseInt(amountCharged);
-                    order.paymentReference = reference;
-                    await order.save();
-
-                    // Clear Customers cart
-                    await cartModel.deleteMany({ customerRef: customer._id});
-
-
-                    // Notify customer 
-                    emailingFunction(
-                        // notify customer with email
-                    );
-
-                    // Notify customer support (optional)
-                    emailingFunction(
-                        // notify admin with email
-                    )
-
-
-
-                    // Respond with a clear error to the user
-                    return res.status(200).json({
-                        status: "payment mismatch",
-                        message: "Payment amount does not match the order total. Our team is reviewing this.",
-                        details: { 
-                            orderTotalAmount: order.orderTotalAmount, 
-                            amountCharged, 
-                        }
-                    })
-                }
-
-                order.paymentStatus = "success"; // Update the payment status
+                order.paymentStatus = "Success"; // Update the payment status
                 order.paymentReference = reference; // Update the payment reference
-
+                // Set payment method from parsedData.data.channel
+                order.paymentMethod = parsedData.data.channel || "Unknown";
+                
                 const updatedOrder = await order.save();
 
                 if (!updatedOrder) {
@@ -103,38 +110,42 @@ const verifyTransactionFunction = async (req, res) => {
         
                 console.log('Updated Order:', updatedOrder);
 
-                // Clear Customers cart
-                await cartModel.deleteMany({ customerRef: customer._id});
-
-                const successPaymentTitle = 'Payment success';
-                const successPaymentText = `
-                    <p>Dear Customer,</p>
-    
-                    <p>Thank you for your payment!</p>
-    
-                    <p>Your payment of <strong>${amountCharged}</strong> was successful, and your order ID is <strong>${orderId}</strong>.</p>
-    
-                    <p>Your transaction reference is <strong>${reference}</strong>.</p>
-    
-                    <p>If you have any questions or need further assistance, feel free to contact our support team.</p>
-    
-                    <p>Thank you for choosing us!</p>
-    
-                    <p>Best regards,<br>Your Company Name</p>
-                `;
-
-                // Email customer on their successful purchase
-                emailingFunction(
-                    customerEmail, 
-                    successPaymentTitle, 
-                    successPaymentText
-                );
+                // Clear Customer Cart....
+                await cartModel.deleteMany({ customerRef: customer._id });
+                
+                const successEmailData = {
+                    logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`,
+                    title: 'Payment Successful!',
+                    message: `
+                        Thank you for your payment! Your transaction of 
+                        ₦${(parsedData.data.amount / 100).toFixed(2)} 
+                        was successful.
+                        `,
+                    reference: reference,
+                    orderId: orderId,
+                    orderLink: `${process.env.CLIENT_URL}/account/purchase-details/${orderId}`
+                };
+                const successEmailHtml = compileEmailTemplate('paymentSuccess', successEmailData);
+                emailingFunction(customerEmail, 'Payment Success - DMAN E-commerce', successEmailHtml);
 
                 return res.status(200).json({
                   message: "Transaction verified successfully",
                   data: parsedData.data,
                 });
             } else {
+                // For payment failure, compile failure template
+                const failureEmailData = {
+                    logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`,
+                    title: 'Payment Unsuccessful',
+                    message: 'Unfortunately, your payment was not successful. Please try again or contact support for assistance.',
+                    reference: reference,
+                    supportLink: `${process.env.CLIENT_URL}/contact` 
+                };
+
+                const failureEmailHtml = compileEmailTemplate('paymentFailure', failureEmailData);
+                // Send Payment failed email
+                emailingFunction(customerEmail, 'Payment Unsuccessful - DMAN E-commerce', failureEmailHtml);
+  
                 // Transaction not successful
                 return res.status(400).json({
                   error: "Transaction verification failed",

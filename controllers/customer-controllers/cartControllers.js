@@ -3,6 +3,7 @@ const cartModel = require("../../models/cartModel");
 const customerModel = require("../../models/customerModel");
 const productModel = require("../../models/productModel");
 const orderModel = require("../../models/orderModel");
+const { checkCouponValidity } = require("../../helpers/couponHelper");
 
 const fetchCartFunction = async (req, res) => {
     const { customerId } = req.query;
@@ -241,13 +242,13 @@ const placeOrderFunction = async (req, res) => {
     
     try {
         if (
-            !customerId,
-            !country,
-            !firstName,
-            !lastName,
-            !address,
-            !city,
-            !state,
+            !customerId ||
+            !country ||
+            !firstName ||
+            !lastName ||
+            !address ||
+            !city ||
+            !state ||
             !phoneNumber
         ) {
             return res.status(404).json({ error: "Please fill up the necessay details!"});
@@ -273,45 +274,23 @@ const placeOrderFunction = async (req, res) => {
 
         console.log('cart total price is', cartTotalPurchase);
 
-        const shippingCost = 1000;
-
         // Query and validate coupon if applied
         let discount = 0;
-        let couponMessage;
+        let couponMessage = "";
+
         if (appliedCouponCode) {
-            const coupon = await couponModel.findOne({ couponCode: appliedCouponCode });
-            
-            // To Avoid Timezone Confusion you want the expiration date
-            // to be compared strictly as a date (ignoring time):
-            const couponExpirationDate = new Date(coupon.expirationDate).setHours(0, 0, 0, 0);
-            const currentDate = new Date().setHours(0, 0, 0, 0);
-            
-            if (!coupon || coupon.status !== "Active" || couponExpirationDate < currentDate) {
-                discount = 0;
-                couponMessage = "The coupon code was invalid or expired, so no discount was applied.";
-                console.log("Invalid or expired coupon code!");
-                // return res.status(400).json({ error: "Invalid or expired coupon code!" });
-            } else {
-
-                if (cartTotalPurchase < coupon.minimumPurchaseAmount) {
-                    return res.status(403).json({
-                        error: `Minimum Purchase Amount of ₦${coupon.minimumPurchaseAmount} required to apply this coupon!`,
-                    });
-                }
-    
-                // Retrieve discount amount
-                discount = coupon.discountType === "percentage off"
-                    ? (cartTotalPurchase * coupon.discountAmount) / 100
-                    : coupon.discountAmount;
-
+            const couponResult = await checkCouponValidity(appliedCouponCode, customerId, cartTotalPurchase);
+            if (couponResult.isValid) {
+                discount = couponResult.discount;
                 couponMessage = `A discount of ₦${discount} was applied using coupon code ${appliedCouponCode}.`;
-
+            } else {
+                couponMessage = "The coupon code was invalid or expired, so no discount was applied.";
+                console.log("Coupon validation error:", couponResult.message);
             }
-    
         }
-
-
-        // Calculate final total
+          
+        // Calculate final total (including shipping, etc.)
+        const shippingCost = 1000;
         const finalTotal = Math.max(cartTotalPurchase - discount + shippingCost, 0);
 
 

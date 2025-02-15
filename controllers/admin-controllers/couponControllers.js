@@ -1,5 +1,6 @@
 // ADMIN COUPON CONTROLLERS
 const couponModel = require("../../models/couponModel");
+const { convertDateToUTC } = require('../../utils/dateUtils');
 
 const fetchCouponsFunction = async (req, res) => {
 
@@ -69,6 +70,9 @@ const addCouponFunction = async (req, res) => {
             return res.status(400).json({ error: "Please fill in required field!"});
         }
 
+        // Use 'end' if you want the coupon to expire at the end of the day.
+        const utcExpirationDate = convertDateToUTC(expirationDate, 'end');
+
         const newCoupon = new couponModel({
             couponName,
             couponCode,
@@ -78,7 +82,7 @@ const addCouponFunction = async (req, res) => {
             status,
             category,
             subCategory,
-            expirationDate,
+            expirationDate: utcExpirationDate,
             usageLimit,
         });
 
@@ -130,6 +134,9 @@ const editCouponFunction = async (req, res) => {
             return res.status(400).json({ error: "Please fill in required field!"});
         }
 
+        // Use 'end' if you want the coupon to expire at the end of the day.
+        const utcExpirationDate = convertDateToUTC(expirationDate, 'end');
+
         const updatedFields = {
             couponName,
             couponCode,
@@ -139,7 +146,7 @@ const editCouponFunction = async (req, res) => {
             status,
             category,
             subCategory,
-            expirationDate,
+            expirationDate: utcExpirationDate,
             usageLimit,
         };
 

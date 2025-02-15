@@ -11,7 +11,7 @@ const fetchCustomersFunction = async (req, res) => {
     const sortBy = req.query.sortBy; 
 
     let sortQuery = {};
-console.log('calllll')
+    
     try {
         if (sortBy === "Oldest") {
             sortQuery = { createdAt: 1 }; // Sort by oldest first

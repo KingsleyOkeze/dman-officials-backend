@@ -1,7 +1,7 @@
 require('dotenv').config();
 const nodemailer = require("nodemailer");
 
-const emailingFunction = (sendTo, emailSubject, emailText) => {
+const emailingFunction = (sendTo, emailSubject, emailHtml) => {
 
 	let mailTransporter = nodemailer.createTransport({
 		service: 'gmail',
@@ -18,7 +18,7 @@ const emailingFunction = (sendTo, emailSubject, emailText) => {
 		from: process.env.ADMIN_EMAIL,
 		to: sendTo,
 		subject: emailSubject,
-		html: emailText
+		html: emailHtml
 	};
 
 	

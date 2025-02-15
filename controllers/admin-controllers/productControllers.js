@@ -92,7 +92,7 @@ const addProductFunction = async (req, res) => {
             });
             
         }
-console.log('size ish', productSize.length, productSize)
+        console.log('size ish', productSize.length, productSize)
         if (
           !productName ||
           !productDescription ||
@@ -123,10 +123,12 @@ console.log('size ish', productSize.length, productSize)
         // Calculate expiry date only if timer is set
         let expiryDate = null;
         let timerInputed = false;
+        let setProductStatus = "Available"
         if (addedTimer) {
             const timerDurationInSeconds = (hrs * 3600) + (min * 60) + sec;
             expiryDate = new Date(Date.now() + timerDurationInSeconds * 1000);
             timerInputed = true
+            setProductStatus = "LimitedStock"
         }
 
         const newProduct = new productModel({ 
@@ -142,7 +144,8 @@ console.log('size ish', productSize.length, productSize)
             productOfferPrice,
             productQuantity,
             addedTimer: timerInputed === true ? true : false,
-            timerExpiryDate: expiryDate
+            timerExpiryDate: expiryDate,
+            productStatus: setProductStatus
         });
 
         const savedProduct = await newProduct.save();
@@ -166,101 +169,101 @@ console.log('size ish', productSize.length, productSize)
 
 
 const editProductFunction = async (req, res) => {
-  const { productId } = req.params;
-  const { 
-    productName,
-    productDescription,
-    productCategory,
-    productSubCategory,
-    productSize,
-    productColor,
-    productBrand,
-    productPrice,
-    productOfferPrice,
-    productQuantity,
-    productTimer
-  } = req.body;
-  console.log('req is', req.files)
-  console.log('size and color', productSize, productColor)
-  console.log('thing to edit', productName,
-    productDescription,
-    productCategory,
-    productSubCategory,
-    productSize,
-    productColor.length,
-    productBrand,
-    productPrice,
-    productOfferPrice,
-    productQuantity )
-  try {
-    // Retrieve the existing product
-    const product = await productModel.findById(productId);
-    if (!product) {
-        return res.status(404).json({ error: "Product not found!" });
-    }
+    const { productId } = req.params;
+    const { 
+        productName,
+        productDescription,
+        productCategory,
+        productSubCategory,
+        productSize,
+        productColor,
+        productBrand,
+        productPrice,
+        productOfferPrice,
+        productQuantity,
+        productTimer
+    } = req.body;
+    console.log('req is', req.files)
+    console.log('size and color', productSize, productColor)
+    console.log('thing to edit', productName,
+        productDescription,
+        productCategory,
+        productSubCategory,
+        productSize,
+        productColor.length,
+        productBrand,
+        productPrice,
+        productOfferPrice,
+        productQuantity )
+    try {
+        // Retrieve the existing product
+        const product = await productModel.findById(productId);
+        if (!product) {
+            return res.status(404).json({ error: "Product not found!" });
+        }
       
-    // Delete old images from Cloudinary
-    for (let i = 0; i < product.productImageUrl.length; i++) {
-        const imageUrl = product.productImageUrl[i];
-            const publicId = imageUrl.split("/").slice(-3).join("/").split(".")[0];
-            await cloudinary.uploader.destroy(publicId, (err, result) => {
-            if (err) {
-                console.error(`Error deleting image: ${imageUrl}`, err);
-            } else {
-                console.log(`Deleted image: ${imageUrl}`, result);
+        // Check if files were uploaded
+        if (!req.files || req.files.length === 0) {
+            console.error('No files uploaded', req.files);
+            return res.status(400).json({ error: 'Please upload at least one image' });
+        }
+
+        // Delete old images from Cloudinary
+        if (product.productImageUrl && product.productImageUrl.length > 0) {
+            for (let i = 0; i < product.productImageUrl.length; i++) {
+                const imageUrl = product.productImageUrl[i];
+                const publicId = imageUrl.split("/").slice(-3).join("/").split(".")[0];
+                await cloudinary.uploader.destroy(publicId, (err, result) => {
+                    if (err) {
+                        console.error(`Error deleting image: ${imageUrl}`, err);
+                    } else {
+                        console.log(`Deleted image: ${imageUrl}`, result);
+                    }
+                });
             }
-        });
-      
-    }
-    // Check if files were uploaded
-    if (!req.files || req.files.length === 0) {
-        console.error('No files uploaded', req.files);
-        return res.status(400).json({ error: 'Please upload at least one image' });
-    }
+        }
 
+        // Initialize an array to store uploaded image URLs
+        const imageUrls = [];
 
-  
-    // Initialize an array to store uploaded image URLs
-    const imageUrls = [];
-
-    // Use a normal for loop for file uploads
-    for (let i = 0; i < req.files.length; i++) {
-          const file = req.files[i];
+        // Use a normal for loop for file uploads
+        for (let i = 0; i < req.files.length; i++) {
+            const file = req.files[i];
 
  
-          // Upload to Cloudinary
-          const result = await cloudinary.uploader.upload(file.path);
-          // Validate the result
-          if (!result || !result.secure_url) {
-              console.error('Cloudinary upload failed for file:', file.path);
-              return res.status(500).json({ error: 'Failed to upload image(s)' });
-          }
+             // Upload to Cloudinary
+             const result = await cloudinary.uploader.upload(file.path);
+             // Validate the result
+             if (!result || !result.secure_url) {
+                 console.error('Cloudinary upload failed for file:', file.path);
+                 return res.status(500).json({ error: 'Failed to upload image(s)' });
+             }
           
-          // Add URL to the array
-          imageUrls.push(result.secure_url);
-          console.log('Uploaded image URL:', result.secure_url);
+             // Add URL to the array
+             imageUrls.push(result.secure_url);
+             console.log('Uploaded image URL:', result.secure_url);
 
 
-          // Delete the file from local storage
-          fs.unlink(file.path, (err) => {
-          if (err) console.error('Error deleting file:', err);
-              else console.log(`File ${file.path} deleted successfully`);
-          });
+             // Delete the file from local storage
+             fs.unlink(file.path, (err) => {
+             if (err) console.error('Error deleting file:', err);
+                 else console.log(`File ${file.path} deleted successfully`);
+             });
           
-      }
-      console.log('size ish', productSize.length, productSize, typeof productSize)
-      if (
-        !productName ||
-        !productDescription ||
-        !productCategory ||
-        !productSubCategory ||
-        productSize.length === 0 ||
-        productColor.length === 0 ||
-        !productBrand ||
-        !productPrice ||
-        !productOfferPrice ||
-        !productQuantity 
-      ) {
+        }
+        console.log('size ish', productSize.length, productSize, typeof productSize)
+        if (
+            !productName ||
+            !productDescription ||
+            !productCategory ||
+            !productSubCategory ||
+            productSize.length === 0 ||
+            productColor.length === 0 ||
+            !productBrand ||
+            !productPrice ||
+            !productOfferPrice ||
+            !productQuantity 
+        ) {
         console.log('ensur error is 1', productName)
         console.log('ensur error is 2', productDescription)
         console.log('ensur error is 3', productCategory)
@@ -271,63 +274,65 @@ const editProductFunction = async (req, res) => {
         console.log('ensur error is 8', productPrice)
         console.log('ensur error is 9', productOfferPrice)
         console.log('ensur error is 10', productQuantity)
-        return res.status(400).json({ error: "Please ensure that all necessary field are filled!"});
-      }
+            return res.status(400).json({ error: "Please ensure that all necessary field are filled!"});
+        }
 
-      // Extract and validate productTimer
-      const { hrs = 0, min = 0, sec = 0 } = productTimer || {};
-      if (
-          isNaN(hrs) || isNaN(min) || isNaN(sec) ||
-           hrs < 0 || min < 0 || sec < 0
-      ) {
-          return res.status(400).json({ error: "Timer values must be non-negative numbers. Please check your input." });
-      }
+        // Extract and validate productTimer
+        const { hrs = 0, min = 0, sec = 0 } = productTimer || {};
+        if (
+            isNaN(hrs) || isNaN(min) || isNaN(sec) ||
+            hrs < 0 || min < 0 || sec < 0
+        ) {
+            return res.status(400).json({ 
+                error: "Timer values must be non-negative numbers. Please check your input." 
+            });
+        }
 
-      // Determine if the timer has been added
-      const addedTimer = hrs > 0 || min > 0 || sec > 0;
+        // Determine if the timer has been added
+        const addedTimer = hrs > 0 || min > 0 || sec > 0;
 
-      // Calculate expiry date only if timer is set
-      let expiryDate = null;
-      let timerInputed = false;
-      if (addedTimer) {
-          const timerDurationInSeconds = (hrs * 3600) + (min * 60) + sec;
-          expiryDate = new Date(Date.now() + timerDurationInSeconds * 1000);
-          timerInputed = true
-      }
+        // Calculate expiry date only if timer is set
+        let expiryDate = null;
+        let timerInputed = false;
+        if (addedTimer) {
+            const timerDurationInSeconds = (hrs * 3600) + (min * 60) + sec;
+            expiryDate = new Date(Date.now() + timerDurationInSeconds * 1000);
+            timerInputed = true
+        }
 
-      const updateData = { 
-          productImageUrl: imageUrls,
-          productName,
-          productDescription,
-          productCategory,
-          productSubCategory,
-          productSize,
-          productColor,
-          productBrand,
-          productPrice,
-          productOfferPrice,
-          productQuantity,
-          addedTimer: timerInputed === true ? true : false,
-          timerExpiryDate: expiryDate
-      };
+        const updateData = { 
+            productImageUrl: imageUrls,
+            productName,
+            productDescription,
+            productCategory,
+            productSubCategory,
+            productSize,
+            productColor,
+            productBrand,
+            productPrice,
+            productOfferPrice,
+            productQuantity,
+            addedTimer: timerInputed === true ? true : false,
+            timerExpiryDate: expiryDate
+        };
 
-      const updatedProduct = await productModel.findByIdAndUpdate(
-        productId,                  // The ID of the document to update
-        { $set: updateData }, // The fields to update
-        { new: true }           // Return the updated document
-      );
+        const updatedProduct = await productModel.findByIdAndUpdate(
+            productId,                  // The ID of the document to update
+            { $set: updateData }, // The fields to update
+            { new: true }           // Return the updated document
+        );
   
-      if (!updatedProduct) {
-        return res.status(400).json({ error: "Product not found!"});
-      } 
+        if (!updatedProduct) {
+            return res.status(400).json({ error: "Product not found!"});
+        } 
 
-      console.log("Product updated successfully!", updatedProduct);
-      return res.status(200).json({ result: updatedProduct, message: 'Product updated successfully!' });
+        console.log("Product updated successfully!", updatedProduct);
+        return res.status(200).json({ result: updatedProduct, message: 'Product updated successfully!' });
 
-  } catch (error) {
-    console.log("Error updating product", error)
-    return res.status(500).json({ error: "Internal Server Error!"})
-  }
+    } catch (error) {
+        console.log("Error updating product", error)
+        return res.status(500).json({ error: "Internal Server Error!"})
+    }
 
 };
 

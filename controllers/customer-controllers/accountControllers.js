@@ -242,7 +242,7 @@ const saveProductFunction = async (req, res) => {
         // Check if the product is already saved by the user
         const productExist = await savedProductModel.findOne({ customerRef: customerId, productRef: productId });
         if (productExist) {
-            return res.status(401).json({ error: "Product already saved!" });
+            return res.status(409).json({ error: "Product already saved!" });
         } 
 
         // Add new product to save
@@ -250,14 +250,16 @@ const saveProductFunction = async (req, res) => {
         const savedProduct = await newProductToSave.save();
         
         if (!savedProduct) {
-          return res.status(401).json({ error: "Failed to save product!"})
+          return res.status(500).json({ error: "Failed to save product!"})
         }
 
         // Fetch updated saved product
         const updatedSavedProduct = await savedProductModel
           .find({ customerRef: customerId })
           .populate('productRef');
-        console.log("success save product!", updatedSavedProduct)
+
+        console.log("success save product!", updatedSavedProduct);
+        
         return res.status(201).json({ 
           message: "Product saved successfully!", 
           savedProducts: updatedSavedProduct
