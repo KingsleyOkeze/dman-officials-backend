@@ -24,7 +24,8 @@ const {
     fetchCartFunction,
     removeFromCartFunction,
     fetchCartTotalPriceFunction,
-    placeOrderFunction
+    placeOrderFunction,
+    fetchOrderPurchasedTrackingStatusFunction
 } = require("../controllers/customer-controllers/cartControllers");
 const { 
     // initializeTransactionFunction, 
@@ -88,6 +89,7 @@ router.post("/update-cart", customerAuth, updateQuantityFunction)
 router.post("/remove-from-cart", customerAuth, removeFromCartFunction);
 router.get("/fetch-cart-total-price", customerAuth, fetchCartTotalPriceFunction);
 router.post("/place-order", customerAuth, placeOrderFunction);
+
 
 // ORDER ROUTER
 

@@ -52,7 +52,7 @@ const addProductFunction = async (req, res) => {
       productPrice,
       productOfferPrice,
       productQuantity,
-      productTimer
+      productAddedTimer
     } = req.body;
     console.log('req is', req.files)
     
@@ -108,8 +108,12 @@ const addProductFunction = async (req, res) => {
           return res.status(400).json({ error: "Please ensure that all necessary field are filled!"});
         }
 
+        // When appending an object to FormData, use JSON.stringify() to convert it into a JSON string. 
+        // This ensures the object is correctly transmitted and can be parsed on the server side.
+        const timer = typeof productAddedTimer === 'string' ? JSON.parse(productAddedTimer) : productAddedTimer;
+
         // Extract and validate productTimer
-        const { hrs = 0, min = 0, sec = 0 } = productTimer || {};
+        const { hrs = 0, min = 0, sec = 0 } = timer || {};
         if (
             isNaN(hrs) || isNaN(min) || isNaN(sec) ||
              hrs < 0 || min < 0 || sec < 0
@@ -122,12 +126,10 @@ const addProductFunction = async (req, res) => {
 
         // Calculate expiry date only if timer is set
         let expiryDate = null;
-        let timerInputed = false;
         let setProductStatus = "Available"
         if (addedTimer) {
             const timerDurationInSeconds = (hrs * 3600) + (min * 60) + sec;
             expiryDate = new Date(Date.now() + timerDurationInSeconds * 1000);
-            timerInputed = true
             setProductStatus = "LimitedStock"
         }
 
@@ -143,7 +145,8 @@ const addProductFunction = async (req, res) => {
             productPrice,
             productOfferPrice,
             productQuantity,
-            addedTimer: timerInputed === true ? true : false,
+            addedTimer,
+            productAddedTimer: timer,
             timerExpiryDate: expiryDate,
             productStatus: setProductStatus
         });
@@ -181,7 +184,7 @@ const editProductFunction = async (req, res) => {
         productPrice,
         productOfferPrice,
         productQuantity,
-        productTimer
+        productAddedTimer
     } = req.body;
     console.log('req is', req.files)
     console.log('size and color', productSize, productColor)
@@ -277,8 +280,12 @@ const editProductFunction = async (req, res) => {
             return res.status(400).json({ error: "Please ensure that all necessary field are filled!"});
         }
 
+        // When appending an object to FormData, use JSON.stringify() to convert it into a JSON string. 
+        // This ensures the object is correctly transmitted and can be parsed on the server side.
+        const timer = typeof productAddedTimer === 'string' ? JSON.parse(productAddedTimer) : productAddedTimer;
+
         // Extract and validate productTimer
-        const { hrs = 0, min = 0, sec = 0 } = productTimer || {};
+        const { hrs = 0, min = 0, sec = 0 } = timer || {};
         if (
             isNaN(hrs) || isNaN(min) || isNaN(sec) ||
             hrs < 0 || min < 0 || sec < 0
@@ -293,11 +300,9 @@ const editProductFunction = async (req, res) => {
 
         // Calculate expiry date only if timer is set
         let expiryDate = null;
-        let timerInputed = false;
         if (addedTimer) {
             const timerDurationInSeconds = (hrs * 3600) + (min * 60) + sec;
             expiryDate = new Date(Date.now() + timerDurationInSeconds * 1000);
-            timerInputed = true
         }
 
         const updateData = { 
@@ -312,7 +317,8 @@ const editProductFunction = async (req, res) => {
             productPrice,
             productOfferPrice,
             productQuantity,
-            addedTimer: timerInputed === true ? true : false,
+            addedTimer,
+            productAddedTimer: timer,
             timerExpiryDate: expiryDate
         };
 

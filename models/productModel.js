@@ -52,6 +52,11 @@ const productSchema = new mongoose.Schema({
         type: Boolean, 
         default: false 
     },
+    productAddedTimer: {
+        hrs: { type: Number, default: 0 },
+        min: { type: Number, default: 0 },
+        sec: { type: Number, default: 0 }
+    },
     timerExpired: {
         type: Boolean,
         default: false

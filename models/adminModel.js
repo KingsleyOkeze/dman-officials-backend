@@ -16,9 +16,6 @@ const adminSchema = new mongoose.Schema(
 		},
 		phoneNumber: {
 			type: String,
-			// type: String,
-			// required: true, 
-			// match: /^\+?\d{7,15}$/, // Validates international phone number format
 		},
 		password: {
 			type: String,
@@ -29,7 +26,7 @@ const adminSchema = new mongoose.Schema(
             type: String,
             required: true,
             enum: ["Admin"], // Only these two roles
-            default: "Admin", // Default to "admin" if no role is provided
+            default: "Admin", // Default to "Admin" if no role is provided
         },
 		
 		verificationToken: {
@@ -51,6 +48,6 @@ const adminSchema = new mongoose.Schema(
 	{ timestamps: true }
 );
 
-const adminModel = mongoose.model('admin', adminSchema);
+const adminModel = mongoose.model('admins', adminSchema);
 
 module.exports = adminModel;

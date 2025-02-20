@@ -353,5 +353,5 @@ module.exports = {
     fetchCartFunction,
     removeFromCartFunction,
     fetchCartTotalPriceFunction,
-    placeOrderFunction 
+    placeOrderFunction
 };

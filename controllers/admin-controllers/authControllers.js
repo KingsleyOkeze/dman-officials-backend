@@ -4,8 +4,6 @@ const adminModel = require('../../models/adminModel');
 const customerModel = require('../../models/customerModel');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-const emailFunction = require('../../helpers/emailingFunction');
 const { 
 	jwt_secret, 
 	accessTokenSecret, 
@@ -13,13 +11,15 @@ const {
 	salt,
 	isValidEmail 
 } = require("../../config/config");
+const emailingFunction = require('../../helpers/emailingFunction');
+const { compileEmailTemplate } = require('../../helpers/emailTemplateHelper');
 
 
 // Sign up function
 const signupFunction = async (req, res) => {
-	const { firstName, lastName, email, phoneNumber, password } = req.body;
+	const { firstName, lastName, email, phone, password } = req.body;
 
-	console.log('sign up info is', firstName, lastName, email, phoneNumber, password);
+	console.log('sign up info is', firstName, lastName, email, phone, password);
 
 	try {
 		if (!email || !password) {
@@ -62,7 +62,7 @@ const signupFunction = async (req, res) => {
 			firstName,
 			lastName,
             email,
-            phoneNumber,
+            phoneNumber: phone,
             password: hashedPassword,
             role,
             verificationToken, // Set token here
@@ -74,23 +74,36 @@ const signupFunction = async (req, res) => {
             return res.status(401).json({ error: "Failed to create user account!" });
         }
 
-		emailFunction(
-			email,
-			'Verify your email to proceed your Dman Officials Admin sign up.',
-			`<p>Please click the following link to verify your email: 
-				<a href=${process.env.CLIENT_URL}/admin/sign-up-email-verification/${verificationToken}>Verify Email</a>
-			</p>`
-		);
-		console.log("Admin account successfully created!")
+		// Compile and send account sign up email
+		const signUpEmailData = {
+			logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+			title: 'Account Sign up - DMAN Admin',
+			message: `
+				Please click the following link to verify your email: \n
+		 		${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken}
+				`,
+			firstName: firstName,
+		};
+
+		const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
+
+		// Send email to customer and optionally notify support/admin.
+		emailingFunction(email, 'Account Sign up - DMAN Admin', signUpEmailHtml);
+
+		console.log("Admin account successfully created!");
+
 		return res.status(201).json({ 
 			userId: createdUser._id,
-			message: "An email on how to complete sign up was sent to you"});
+			message: "An email on how to complete sign up was sent to you"
+		});
 
 	} catch (error) {
 		console.log('Sign up error', error);
 		return res.status(500).json({ error: 'Internal Server Error!' });
 	}
+
 };
+
 
 // VERIFICATION EMAIL FUNCTION
 const verifySignUpEmailFunction = async (req, res) => {
@@ -129,21 +142,24 @@ const verifySignUpEmailFunction = async (req, res) => {
 		}
 
 		console.log('success while verifying email', savedUser);
+
 		return res.status(200).json({
 			userId: savedUser._id,
 			role: savedUser.role,
 			message: "Succssfully verified user's email.",
 		});
+
 	} catch (error) {
 		console.log('server error while verifying email', error);
-		return res.status(500).json({ error: 'Internal Server Error' });
+		return res.status(500).json({ error: 'Internal Server Error!' });
 	}
 };
 
 // RESEND VERIFICATION EMAIL FUNCTION
 const resendSignUpVerificationEmailFunction = async (req, res) => {
 	const { userId } = req.params;
-console.log('usr', userId)
+    console.log('userId', userId);
+
 	try {
 		if (!userId) {
 			return res.status(400).json({ message: 'User ID is missing' });
@@ -174,19 +190,30 @@ console.log('usr', userId)
 			return res.status(401).json({ error: 'Failed to set veriication token' });
 		}
 
-		emailFunction(
-			email,
-			'Resending of sign up verification email.',
-			`<p>Please click the following link to verify your email: 
-				<a href=${process.env.CLIENT_URL}/admin/sign-up-email-verification/${verificationToken}>Verify Email</a>
-			</p>`
-		);
+		// Compile and send account sign up email
+		const signUpEmailData = {
+			logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+			title: 'Account Sign up - DMAN Admin',
+			message: `
+				Please click the following link to verify your email: 
+
+		 		${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken}
+				
+				`,
+			firstName: user.firstName,
+		};
+
+		const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
+
+		// Send email to customer and optionally notify support/admin.
+		emailingFunction(email, 'Account Sign up - DMAN Admin', signUpEmailHtml);
 
 		return res.status(200).json({ message: 'An email was sent to you' });
 	} catch (error) {
 		console.log('server error while verifying email', error);
 		return res.status(500).json({ error: 'Internal Server Error' });
 	}
+
 };
 
 
@@ -230,13 +257,21 @@ const loginFunction = async (req, res) => {
 				return res.status(401).json({ error: "Error setting verification token"})
 			}
 
-			emailFunction(
-				email,
-				'Verify your email to proceed.',
-				`<p>Please click the following link to verify your email: 
-					<a href=${process.env.CLIENT_URL}/${verificationToken}>Verify Email</a>
-				</p>`
-			);
+			// Compile and send account sign up email
+		    const signUpEmailData = {
+			    logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+			    title: 'Account Sign up - DMAN Admin',
+			    message: `
+				    Please click the following link to verify your email: \n
+		 		    ${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken}
+				`,
+			    firstName: user.firstName,
+		    };
+
+		    const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
+
+		   // Send email to customer and optionally notify support/admin.
+		   emailingFunction(email, 'Account Sign up - DMAN Admin', signUpEmailHtml);
 
 			return res.status(403).json({
 				error: 'Email is not verified!',
@@ -295,68 +330,78 @@ const loginFunction = async (req, res) => {
 
 
 const forgotPasswordFunction = async (req, res) => {
-  const { email } = req.body;
+    const { email } = req.body;
 
-  // Check if the email exists in the system
-  const user = await adminModel.findOne({ email });
-  if (!user) {
-    return res.status(404).json({ message: 'User not found' });
-  }
+    // Check if the email exists in the system
+    const user = await adminModel.findOne({ email });
+    if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+    }
 
-  // Generate JWT token with expiration
-  const resetToken = jwt.sign({ email }, jwt_secret, { expiresIn: '10m' });
+    // Generate JWT token with expiration
+    const resetToken = jwt.sign({ email }, jwt_secret, { expiresIn: '10m' });
 
-  // Generate reset link
-  const resetLink = `${process.env.CLIENT_URL}/admin/reset-password/${resetToken}`;
+    // Generate reset link
+    const resetLink = `${process.env.CLIENT_URL}/admin/reset-password/${resetToken}`;
 
-  // Send email with the reset link
-  emailFunction(
-    email,
-    'Reset Your Password',
-    `<p>Click the link below to reset your password:</p>
-     <a href="${resetLink}">${resetLink}</a>
-     <p>This link will expire in 10 minutes.</p>`
-  );
+    // Compile and send reset password email
+    const resetPasswordData = {
+	    logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+	    title: 'Reset Account Password - DMAN Admin',
+	    message: `
+		     Click the link below to reset your password: \n
+		     ${resetLink} \n
+			 This link will expire in 10 minutes. 
+			 If you did not request a password reset, 
+			 please ignore this email or contact our 
+			 support.	 
+		`,
+	    firstName: user.firstName,
+    };
 
-  return res.status(200).json({ message: 'Password reset link has been sent to your email.' });
+    const resetPasswordHtml = compileEmailTemplate('passwordReset', resetPasswordData);
+
+    emailingFunction(email, 'Reset Password - DMAN Admin', resetPasswordHtml);
+
+    return res.status(200).json({ message: 'Password reset link has been sent to your email.' });
 
 };
 
 
 
-  
 const resetPasswordFunction = async (req, res) => {
 	const { token, newPassword } = req.body;
   
 	try {
-	  // Verify token
-	  const decoded = jwt.verify(token, jwt_secret);
+	    // Verify token
+	    const decoded = jwt.verify(token, jwt_secret);
 
-	  if (!decoded) {
-		return res.status(400).json({ error: 'Invalid or expired token' });
-	  }
+	    if (!decoded) {
+		    return res.status(400).json({ error: 'Invalid or expired token' });
+	    }
   
-	  // Find user by email
-	  const user = await adminModel.findOne({ email: decoded.email });
+	    // Find user by email
+	    const user = await adminModel.findOne({ email: decoded.email });
 
-	  if (!user) {
-		return res.status(404).json({ message: 'User not found' });
-	  }
+	    if (!user) {
+		    return res.status(404).json({ message: 'User not found' });
+	    }
   
-	  // Hash the new password
-	  const hashedPassword = await bcrypt.hash(newPassword, 10);
+	    // Hash the new password
+	    const hashedPassword = await bcrypt.hash(newPassword, 10);
   
-	  // Update password
-	  user.password = hashedPassword;
-	  await user.save();
+	    // Update password
+	    user.password = hashedPassword;
+	    await user.save();
   
-	  return res.status(200).json({ message: 'Password reset successfully!' });
+	    return res.status(200).json({ message: 'Password reset successfully!' });
+		
 	} catch (error) {
-	  return res.status(500).json({ error: 'Internal Server Error!' });
+	    return res.status(500).json({ error: 'Internal Server Error!' });
 	}
+
 };
   
-
 
 
 const refereshTokenFunction = async (req, res) => {
@@ -383,7 +428,7 @@ const refereshTokenFunction = async (req, res) => {
 };
 
 
-// Logout Function
+
 const logoutFunction = (req, res) => {
     try {
         // Clear the refreshToken cookie

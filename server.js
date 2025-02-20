@@ -8,6 +8,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const customerRoutes = require("./routes/customerRoutes");
 const couponExpirationJob = require("./jobs/couponExpirationJob");
 const productExpirationJob = require("./jobs/productExpirationJob");
+const productModel = require('./models/productModel');
 const PORT = process.env.PORT || 5000;
 
 // cors options
@@ -21,7 +22,7 @@ const cors_options = {
 app.use(express.json());
 app.use(cors(cors_options));
 app.use(cookieParser());
-
+  
 
 mongoose.connect(process.env.MONGOB_URL).then(() => {
     console.log('DB CONNECTED!')
@@ -36,13 +37,6 @@ mongoose.connect(process.env.MONGOB_URL).then(() => {
     console.log("Error connecting to DB:", error);
 })
  
-
-
-
-// app.post("/", populateCoupons) 
-
-
-
 
 
 app.use("/admin", adminRoutes);

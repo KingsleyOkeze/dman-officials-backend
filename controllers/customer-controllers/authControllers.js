@@ -4,15 +4,14 @@ const customerModel = require('../../models/customerModel');
 const adminModel = require('../../models/adminModel');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-const emailFunction = require('../../helpers/emailingFunction');
+const emailingFunction = require("../../helpers/emailingFunction");
+const { compileEmailTemplate } = require('../../helpers/emailTemplateHelper');
 const { 
 	jwt_secret, 
 	accessTokenSecret, 
 	refreshTokenSecret, 
 	salt,
-	isValidEmail,
-	// isValidPhoneNumber
+	isValidEmail
 } = require("../../config/config");
 const activityLogsModel = require('../../models/activityLogsModel');
 
@@ -24,14 +23,14 @@ const signupFunction = async (req, res) => {
         lastName,
         email,
         password,
-        phoneNumber,
+        phone,
         country,
         dob,
         receiveUpdates
     } = req.body;
 
 	console.log(
-        'sign up info is', firstName, lastName, phoneNumber, email, password, country, dob, receiveUpdates
+        'sign up info is', firstName, lastName, phone, email, password, country, dob, receiveUpdates
     );
 
 	try {
@@ -44,11 +43,6 @@ const signupFunction = async (req, res) => {
 			console.log('Invalid email');
 			return res.status(403).json({ error: "Invalid email!"})
 		} 
-
-        // Validate phone number
-        // if (!isValidPhoneNumber(phoneNumber)) {
-        //     return res.status(403).json({ error: 'Invalid phone number format.' });
-        // }
 
 		// Check if email already exist in the database
         const existAsAnAdmin = await adminModel.findOne({ email });
@@ -81,7 +75,7 @@ const signupFunction = async (req, res) => {
             firstName,
             lastName,
             email,
-            phoneNumber,
+            phoneNumber: phone,
             country,
             dob,
             receiveUpdates,
@@ -96,23 +90,33 @@ const signupFunction = async (req, res) => {
             return res.status(401).json({ error: "Failed to create user account!" });
         }
 
-		emailFunction(
-			email,
-			'Verify your email to proceed your Dman Officials Customer sign up.',
-			`<p>Please click the following link to verify your email: 
-				<a href=${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken}>Verify Email</a>
-			</p>`
-		);
+		// Compile and send account sign up email
+		const signUpEmailData = {
+			logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+			title: 'Account Sign up - DMAN E-commerce',
+			message: `
+				Please click the following link to verify your email: \n
+		 		${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken}
+				`,
+			firstName: firstName,
+		};
+
+		const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
+
+		emailingFunction(email, 'Account Sign up - DMAN E-commerce', signUpEmailHtml);
+		
 		console.log("customer account successfully created!")
 		return res.status(201).json({ 
 			userId: createdUser._id,
-			message: "An email on how to complete sign up was sent to you"});
+			message: "An email on how to complete sign up was sent to you"
+		});
 
 	} catch (error) {
 		console.log('Sign up error', error);
 		return res.status(500).json({ error: 'Internal Server Error!' });
 	}
 };
+
 
 // VERIFICATION EMAIL FUNCTION
 const verifySignUpEmailFunction = async (req, res) => {
@@ -162,10 +166,13 @@ const verifySignUpEmailFunction = async (req, res) => {
 	}
 };
 
+
+
 // RESEND VERIFICATION EMAIL FUNCTION
 const resendSignUpVerificationEmailFunction = async (req, res) => {
 	const { userId } = req.params;
-console.log('usr', userId)
+    console.log('usr', userId);
+
 	try {
 		if (!userId) {
 			return res.status(400).json({ message: 'User ID is missing' });
@@ -196,19 +203,28 @@ console.log('usr', userId)
 			return res.status(401).json({ error: 'Failed to set veriication token' });
 		}
 
-		emailFunction(
-			email,
-			'Resending of sign up verification email.',
-			`<p>Please click the following link to verify your email: 
-				<a href=${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken}>Verify Email</a>
-			</p>`
-		);
+		// Compile and send account sign up email
+		const signUpEmailData = {
+			logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+			title: 'Account Sign up - DMAN E-commerce',
+			message: `
+				Please click the following link to verify your email: \n
+		 		${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken}
+				`,
+			firstName: user.firstName,
+		};
+
+		const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
+
+		emailingFunction(email, 'Account Sign up - DMAN E-commerce', signUpEmailHtml);
 
 		return res.status(200).json({ message: 'An email was sent to you' });
+
 	} catch (error) {
 		console.log('server error while verifying email', error);
 		return res.status(500).json({ error: 'Internal Server Error' });
 	}
+
 };
 
 
@@ -217,6 +233,7 @@ const loginFunction = async (req, res) => {
 	const { email, password, ip } = req.body;
 
 	console.log("Login details", email, password);
+
 	try {
 		if (!email || !password) {
 			return res.status(400).json({ error: 'Email & password is required!' });
@@ -252,14 +269,21 @@ const loginFunction = async (req, res) => {
 				return res.status(401).json({ error: "Error setting verification token"})
 			}
 
-			emailFunction(
-				email,
-				'Verify your email to proceed.',
-				`<p>Please click the following link to verify your email: 
-					<a href=${process.env.CLIENT_URL}/${verificationToken}>Verify Email</a>
-				</p>`
-			);
+			// Compile and send account sign up email
+		    const signUpEmailData = {
+			    logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+			    title: 'Account Sign up - DMAN E-commerce',
+			    message: `
+				    Please click the following link to verify your email: \n
+		 		    ${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken}
+				`,
+			    firstName: user.firstName,
+		    };
 
+		    const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
+
+		    emailingFunction(email, 'Account Sign up - DMAN E-commerce', signUpEmailHtml);
+		
 			return res.status(403).json({
 				error: 'Email is not verified!',
 				redirectUrl: `${process.env.CLIENT_URL}/email-sent/${user._id}`,
@@ -324,30 +348,46 @@ const loginFunction = async (req, res) => {
 
 
 const forgotPasswordFunction = async (req, res) => {
-  const { email } = req.body;
+    const { email } = req.body;
 
-  // Check if the email exists in the system
-  const user = await customerModel.findOne({ email });
-  if (!user) {
-    return res.status(404).json({ message: 'User not found' });
-  }
+	try { 
 
-  // Generate JWT token with expiration
-  const resetToken = jwt.sign({ email }, jwt_secret, { expiresIn: '10m' });
+        // Check if the email exists in the system
+        const user = await customerModel.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
-  // Generate reset link
-  const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+        // Generate JWT token with expiration
+        const resetToken = jwt.sign({ email }, jwt_secret, { expiresIn: '10m' });
 
-  // Send email with the reset link
-  emailFunction(
-    email,
-    'Reset Your Password',
-    `<p>Click the link below to reset your password:</p>
-     <a href="${resetLink}">${resetLink}</a>
-     <p>This link will expire in 10 minutes.</p>`
-  );
+        // Generate reset link
+        const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
 
-  return res.status(200).json({ message: 'Password reset link has been sent to your email.' });
+        // Compile and send reset password email
+        const resetPasswordData = {
+	        logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+	        title: 'Reset Account Password - DMAN E-commerce',
+	        message: `
+		        Click the link below to reset your password: \n
+		        "${resetLink}" \n
+			    This link will expire in 10 minutes. 
+			    If you did not request a password reset, 
+			    please ignore this email or contact our 
+			    support.		 
+		    `,
+	        firstName: user.firstName,
+        };
+
+    const resetPasswordHtml = compileEmailTemplate('passwordReset', resetPasswordData);
+
+    emailingFunction(email, 'Reset Password - DMAN E-commerce', resetPasswordHtml);
+
+    return res.status(200).json({ message: 'Password reset link has been sent to your email.' });
+
+    } catch (error) {
+		return res.status(500).json({ error: "Internal Server Error!"});
+	}
 
 };
 
@@ -358,35 +398,35 @@ const resetPasswordFunction = async (req, res) => {
 	const { token, newPassword } = req.body;
   
 	try {
-	  // Verify token
-	  const decoded = jwt.verify(token, jwt_secret);
+	    // Verify token
+	    const decoded = jwt.verify(token, jwt_secret);
 
-	  if (!decoded) {
-		return res.status(400).json({ error: 'Invalid or expired token' });
-	  }
+	    if (!decoded) {
+		    return res.status(400).json({ error: 'Invalid or expired token' });
+	    }
   
-	  // Find user by email
-	  const user = await customerModel.findOne({ email: decoded.email });
+	    // Find user by email
+	    const user = await customerModel.findOne({ email: decoded.email });
 
-	  if (!user) {
-		return res.status(404).json({ message: 'User not found' });
-	  }
+	    if (!user) {
+		    return res.status(404).json({ message: 'User not found' });
+	    }
   
-	  // Hash the new password
-	  const hashedPassword = await bcrypt.hash(newPassword, 10);
+	    // Hash the new password
+	    const hashedPassword = await bcrypt.hash(newPassword, 10);
   
-	  // Update password
-	  user.password = hashedPassword;
-	  await user.save();
+	    // Update password
+	    user.password = hashedPassword;
+	    await user.save();
   
-	  return res.status(200).json({ message: 'Password reset successfully!' });
+	    return res.status(200).json({ message: 'Password reset successfully!' });
+
 	} catch (error) {
-	  return res.status(500).json({ error: 'Internal Server Error!' });
+	    return res.status(500).json({ error: 'Internal Server Error!' });
 	}
+
 };
   
-
-
 
 
 const refereshTokenFunction = async (req, res) => {
@@ -446,6 +486,7 @@ const logoutFunction = async (req, res) => {
             error: "Internal Server Error",
         });
     }
+
 };
 
 
