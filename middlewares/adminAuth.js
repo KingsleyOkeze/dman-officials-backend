@@ -32,7 +32,7 @@ const adminAuth = async (req, res, next) => {
     }
 
     const allowedRoles = ["Admin"];
-    if (!allowedRoles.includes(user.role)) {
+    if (!allowedRoles.includes(decoded.role)) {
         return res.status(403).json({ error: "Access forbidden: Insufficient permissions!" });
     }
 

@@ -9,7 +9,8 @@ const {
 	accessTokenSecret, 
 	refreshTokenSecret, 
 	salt,
-	isValidEmail 
+	isValidEmail, 
+	cookie_options
 } = require("../../config/config");
 const emailingFunction = require('../../helpers/emailingFunction');
 const { compileEmailTemplate } = require('../../helpers/emailTemplateHelper');
@@ -80,7 +81,7 @@ const signupFunction = async (req, res) => {
 			title: 'Account Sign up - DMAN Admin',
 			message: `
 				Please click the following link to verify your email: \n
-		 		${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken}
+		 		${process.env.CLIENT_URL}/admin/sign-up-email-verification/${verificationToken}
 				`,
 			firstName: firstName,
 		};
@@ -112,6 +113,7 @@ const verifySignUpEmailFunction = async (req, res) => {
 
 	try {
 		if (!token) {
+			console.log('Received token is actually:', token);
 			return res.status(400).json({ error: "Verification Token empty!"})
 		}
 		const verifyToken = jwt.verify(token, jwt_secret);
@@ -197,7 +199,7 @@ const resendSignUpVerificationEmailFunction = async (req, res) => {
 			message: `
 				Please click the following link to verify your email: 
 
-		 		${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken}
+		 		${process.env.CLIENT_URL}/admin/sign-up-email-verification/${verificationToken}
 				
 				`,
 			firstName: user.firstName,
@@ -263,7 +265,7 @@ const loginFunction = async (req, res) => {
 			    title: 'Account Sign up - DMAN Admin',
 			    message: `
 				    Please click the following link to verify your email: \n
-		 		    ${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken}
+		 		    ${process.env.CLIENT_URL}/admin/sign-up-email-verification/${verificationToken}
 				`,
 			    firstName: user.firstName,
 		    };
@@ -307,18 +309,18 @@ const loginFunction = async (req, res) => {
 		  // Set cookies with HttpOnly flag
 		  return res
 				   .cookie('refreshToken', refreshToken, {
-						httpOnly: true,
-						secure: true,
-						maxAge: 7 * 24 * 60 * 60 * 1000, // 7 day
-						sameSite: 'None'
-					})
-					 .status(200)
-					 .json({
-							role: user.role,
-							userId: user._id,
-							accessToken,
-							message: 'Admin logged in successfully',
-					  });
+					    httpOnly: true,
+					    secure: process.env.NODE_ENV === 'production' ? true : false, // true in prod, fasle in dev
+					    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 day
+					    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // 'None' in prod, 'Lax' in dev
+				    })
+					.status(200)
+					.json({
+						role: user.role,
+						userId: user._id,
+						accessToken,
+						message: 'Admin logged in successfully',
+					});
 		
 	} catch (error) {
 		console.log("Error logging in", error);
@@ -418,12 +420,21 @@ const refereshTokenFunction = async (req, res) => {
 	const decoded = jwt.verify(refreshToken, refreshTokenSecret);
 
 	if (!decoded) {
+		console.log("Refresh Token invalid:", decoded);
 		return res.status(401).json({ error: 'Invalid or expired refresh token!' });
 	}
 
 	// Issue a new access token
-	const newAccessToken = jwt.sign({ userId: decoded.userId }, accessTokenSecret, { expiresIn: '15m' });
-	return res.json({ accessToken: newAccessToken });
+	const newAccessToken = jwt.sign(
+		{ 
+			userId: decoded.userId,
+		    role:  decoded.role 
+		}, 
+		accessTokenSecret, 
+		{ expiresIn: '15m' }
+	);
+
+	return res.status(200).json({ accessToken: newAccessToken });
 
 };
 
@@ -433,10 +444,10 @@ const logoutFunction = (req, res) => {
     try {
         // Clear the refreshToken cookie
         res.clearCookie("refreshToken", {
-            httpOnly: true,
-            secure: true, // Use secure cookies in production
-            sameSite: "None", // Adjust based on your frontend setup
-        });
+			httpOnly: true,
+			secure: process.env.NODE_ENV === 'production' ? true : false, // true in prod, fasle in dev
+			sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // 'None' in prod, 'Lax' in dev
+		});
 
         console.log("User logged out successfully.");
         return res.status(200).json({

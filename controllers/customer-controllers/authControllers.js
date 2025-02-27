@@ -11,7 +11,7 @@ const {
 	accessTokenSecret, 
 	refreshTokenSecret, 
 	salt,
-	isValidEmail
+	isValidEmail,
 } = require("../../config/config");
 const activityLogsModel = require('../../models/activityLogsModel');
 
@@ -96,7 +96,7 @@ const signupFunction = async (req, res) => {
 			title: 'Account Sign up - DMAN E-commerce',
 			message: `
 				Please click the following link to verify your email: \n
-		 		${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken}
+		 		${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken} <br><br>
 				`,
 			firstName: firstName,
 		};
@@ -208,8 +208,8 @@ const resendSignUpVerificationEmailFunction = async (req, res) => {
 			logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
 			title: 'Account Sign up - DMAN E-commerce',
 			message: `
-				Please click the following link to verify your email: \n
-		 		${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken}
+				Please click the following link to verify your email: <br><br>
+		 		${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken} 
 				`,
 			firstName: user.firstName,
 		};
@@ -325,11 +325,11 @@ const loginFunction = async (req, res) => {
 		  // Set cookies with HttpOnly flag
 		  return res
 				   .cookie('refreshToken', refreshToken, {
-						httpOnly: true,
-						secure: true,
-						maxAge: 7 * 24 * 60 * 60 * 1000, // 7 day
-						sameSite: 'None'
-					})
+					    httpOnly: true,
+					    secure: process.env.NODE_ENV === 'production' ? true : false, // true in prod, fasle in dev
+					    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 day
+					    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // 'None' in prod, 'Lax' in dev
+				    }) 
 					 .status(200)
 					 .json({
 							role: user.role,
@@ -369,8 +369,8 @@ const forgotPasswordFunction = async (req, res) => {
 	        logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
 	        title: 'Reset Account Password - DMAN E-commerce',
 	        message: `
-		        Click the link below to reset your password: \n
-		        "${resetLink}" \n
+		        Click the link to reset your password: \n
+		        "${resetLink}" \n <br><br>
 			    This link will expire in 10 minutes. 
 			    If you did not request a password reset, 
 			    please ignore this email or contact our 
@@ -437,18 +437,27 @@ const refereshTokenFunction = async (req, res) => {
 	console.log("Refresh Token:", refreshToken);
 
 	if (!refreshToken) {
-	  return res.status(401).json({ error: 'No refresh token provided' });
+		console.log("Refresh Token not present:", refreshToken);
+	    return res.status(401).json({ error: 'No refresh token provided' });
 	}
   
 	const decoded = jwt.verify(refreshToken, refreshTokenSecret);
 
 	if (!decoded) {
+		console.log("Refresh Token invalid:", decoded);
 		return res.status(401).json({ error: 'Invalid or expired refresh token' });
     }
 
 	// Issue a new access token
-	const newAccessToken = jwt.sign({ userId: decoded.userId }, accessTokenSecret, { expiresIn: '15m' });
-	return res.json({ accessToken: newAccessToken });
+	const newAccessToken = jwt.sign(
+		{ 
+			userId: decoded.userId, 
+			role: decoded.role 
+		}, 
+		accessTokenSecret, 
+		{ expiresIn: '15m' }
+	);
+	return res.status(200).json({ accessToken: newAccessToken });
 
 };
 
@@ -462,10 +471,10 @@ const logoutFunction = async (req, res) => {
 	try {
         // Clear the refreshToken cookie
         res.clearCookie("refreshToken", {
-            httpOnly: true,
-            secure: true, // Use secure cookies in production
-            sameSite: "None", // Adjust based on your frontend setup
-        });
+			httpOnly: true,
+			secure: process.env.NODE_ENV === 'production' ? true : false, // true in prod, fasle in dev
+			sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // 'None' in prod, 'Lax' in dev
+		});
 
 		// Save logout customer activity
         await activityLogsModel.create({
@@ -488,6 +497,7 @@ const logoutFunction = async (req, res) => {
     }
 
 };
+
 
 
 

@@ -17,13 +17,10 @@ const customerSchema = new mongoose.Schema({
     },
     phoneNumber: {
         type: String,
-        // type: String,
-        // required: true, 
-        // match: /^\+?\d{7,15}$/, // Validates international phone number format
     },
     password: {
         type: String,
-        required: true
+        required: true,
     },
     country: {
         type: String,

@@ -10,19 +10,19 @@ const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const phoneRegex = /^\+?\d{7,15}$/; // Validates international phone numbers
 
 const isValidEmail = (email) => {
-  return emailRegex.test(email);
+    return emailRegex.test(email);
 };
 
 const isValidPhoneNumber = (phoneNumber) => {
-  return phoneRegex.test(phoneNumber);
+    return phoneRegex.test(phoneNumber);
 };
 
 
 // Cloudinary configuration
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
 }); 
 
 
@@ -33,5 +33,5 @@ module.exports = {
     salt,
     isValidEmail,
     isValidPhoneNumber,
-    cloudinary
+    cloudinary,
 }
