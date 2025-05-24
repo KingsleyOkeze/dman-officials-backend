@@ -8,7 +8,6 @@ const adminRoutes = require("./routes/adminRoutes");
 const customerRoutes = require("./routes/customerRoutes");
 const couponExpirationJob = require("./jobs/couponExpirationJob");
 const productExpirationJob = require("./jobs/productExpirationJob");
-const productModel = require('./models/productModel');
 const PORT = process.env.PORT || 5000;
 
 // cors options
@@ -24,7 +23,7 @@ app.use(cors(cors_options));
 app.use(cookieParser());
   
 
-mongoose.connect(process.env.MONGOB_URL).then(() => {
+mongoose.connect(process.env.MONGODB_URL).then(() => {
     console.log('DB CONNECTED!')
     app.listen(PORT, () => {
         console.log(`SERVER LISTENING ON PORT ${PORT}`)
