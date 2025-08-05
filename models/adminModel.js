@@ -2,13 +2,19 @@ const mongoose = require('mongoose');
 
 const adminSchema = new mongoose.Schema(
 	{
-		first_name: {
+		firstName: {
 			type: String,
+			required: true,
 		},
-		last_name: {
+		lastName: {
 			type: String,
+			required: true,
 		},
 		email: {
+			type: String,
+			required: true,
+		},
+		phoneNumber: {
 			type: String,
 		},
 		password: {
@@ -19,8 +25,8 @@ const adminSchema = new mongoose.Schema(
 		role: {
             type: String,
             required: true,
-            enum: ["admin", "customer"], // Only these two roles
-            default: "customer", // Default to "customer" if no role is provided
+            enum: ["Admin"], // Only these two roles
+            default: "Admin", // Default to "Admin" if no role is provided
         },
 		
 		verificationToken: {
@@ -42,6 +48,6 @@ const adminSchema = new mongoose.Schema(
 	{ timestamps: true }
 );
 
-const adminModel = mongoose.model('admin', adminSchema);
+const adminModel = mongoose.model('admins', adminSchema);
 
 module.exports = adminModel;
