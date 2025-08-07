@@ -62,7 +62,7 @@ const verifyTransactionFunction = async (req, res) => {
 
                 // Compile and send payment mismatch email
                 const mismatchEmailData = {
-                    logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+                    logoUrl: `${process.env.CUSTOMER_CLIENT_URL}/dman-logo.png`, 
                     title: 'Payment Mismatch Detected',
                     message: `
                         The amount charged does not match your order total. 
@@ -114,7 +114,7 @@ const verifyTransactionFunction = async (req, res) => {
                 await cartModel.deleteMany({ customerRef: customer._id });
                 
                 const successEmailData = {
-                    logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`,
+                    logoUrl: `${process.env.CUSTOMER_CLIENT_URL}/dman-logo.png`,
                     title: 'Payment Successful!',
                     message: `
                         Thank you for your payment! Your transaction of 
@@ -123,7 +123,7 @@ const verifyTransactionFunction = async (req, res) => {
                         `,
                     reference: reference,
                     orderId: orderId,
-                    orderLink: `${process.env.CLIENT_URL}/account/purchase-details/${orderId}`
+                    orderLink: `${process.env.CUSTOMER_CLIENT_URL}/account/purchase-details/${orderId}`
                 };
                 const successEmailHtml = compileEmailTemplate('paymentSuccess', successEmailData);
                 emailingFunction(customerEmail, 'Payment Success - DMAN E-commerce', successEmailHtml);
@@ -135,11 +135,11 @@ const verifyTransactionFunction = async (req, res) => {
             } else {
                 // For payment failure, compile failure template
                 const failureEmailData = {
-                    logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`,
+                    logoUrl: `${process.env.CUSTOMER_CLIENT_URL}/dman-logo.png`,
                     title: 'Payment Unsuccessful',
                     message: 'Unfortunately, your payment was not successful. Please try again or contact support for assistance.',
                     reference: reference,
-                    supportLink: `${process.env.CLIENT_URL}/contact` 
+                    supportLink: `${process.env.CUSTOMER_CLIENT_URL}/contact` 
                 };
 
                 const failureEmailHtml = compileEmailTemplate('paymentFailure', failureEmailData);

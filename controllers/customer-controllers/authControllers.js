@@ -90,15 +90,14 @@ const signupFunction = async (req, res) => {
             return res.status(401).json({ error: "Failed to create user account!" });
         }
 
+		const verificationLink = `${process.env.CUSTOMER_CLIENT_URL}/sign-up-email-verification/${verificationToken}`;
+
 		// Compile and send account sign up email
 		const signUpEmailData = {
-			logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+			logoUrl: `${process.env.CUSTOMER_CLIENT_URL}/dman-logo.png`, 
 			title: 'Account Sign up - DMAN E-commerce',
-			message: `
-				Please click the following link to verify your email: \n
-		 		${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken} <br><br>
-				`,
 			firstName: firstName,
+			verificationLink: verificationLink,
 		};
 
 		const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
@@ -203,15 +202,14 @@ const resendSignUpVerificationEmailFunction = async (req, res) => {
 			return res.status(401).json({ error: 'Failed to set veriication token' });
 		}
 
+		const verificationLink = `${process.env.CUSTOMER_CLIENT_URL}/sign-up-email-verification/${verificationToken}`;
+
 		// Compile and send account sign up email
 		const signUpEmailData = {
-			logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+			logoUrl: `${process.env.CUSTOMER_CLIENT_URL}/dman-logo.png`, 
 			title: 'Account Sign up - DMAN E-commerce',
-			message: `
-				Please click the following link to verify your email: <br><br>
-		 		${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken} 
-				`,
 			firstName: user.firstName,
+			verificationLink: verificationLink,
 		};
 
 		const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
@@ -271,11 +269,11 @@ const loginFunction = async (req, res) => {
 
 			// Compile and send account sign up email
 		    const signUpEmailData = {
-			    logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+			    logoUrl: `${process.env.CUSTOMER_CLIENT_URL}/dman-logo.png`, 
 			    title: 'Account Sign up - DMAN E-commerce',
 			    message: `
 				    Please click the following link to verify your email: \n
-		 		    ${process.env.CLIENT_URL}/sign-up-email-verification/${verificationToken}
+		 		    ${process.env.CUSTOMER_CLIENT_URL}/sign-up-email-verification/${verificationToken}
 				`,
 			    firstName: user.firstName,
 		    };
@@ -286,7 +284,7 @@ const loginFunction = async (req, res) => {
 		
 			return res.status(403).json({
 				error: 'Email is not verified!',
-				redirectUrl: `${process.env.CLIENT_URL}/email-sent/${user._id}`,
+				redirectUrl: `${process.env.CUSTOMER_CLIENT_URL}/email-sent/${user._id}`,
 				userId: user._id,
 				role: user.role,
 			});
@@ -362,21 +360,14 @@ const forgotPasswordFunction = async (req, res) => {
         const resetToken = jwt.sign({ email }, jwt_secret, { expiresIn: '10m' });
 
         // Generate reset link
-        const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+        const resetLink = `${process.env.CUSTOMER_CLIENT_URL}/reset-password/${resetToken}`;
 
         // Compile and send reset password email
         const resetPasswordData = {
-	        logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+	        logoUrl: `${process.env.CUSTOMER_CLIENT_URL}/dman-logo.png`, 
 	        title: 'Reset Account Password - DMAN E-commerce',
-	        message: `
-		        Click the link to reset your password: \n
-		        "${resetLink}" \n <br><br>
-			    This link will expire in 10 minutes. 
-			    If you did not request a password reset, 
-			    please ignore this email or contact our 
-			    support.		 
-		    `,
 	        firstName: user.firstName,
+	        resetLink: resetLink,
         };
 
     const resetPasswordHtml = compileEmailTemplate('passwordReset', resetPasswordData);
@@ -497,8 +488,6 @@ const logoutFunction = async (req, res) => {
     }
 
 };
-
-
 
 
 

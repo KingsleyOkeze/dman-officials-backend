@@ -10,7 +10,6 @@ const {
 	refreshTokenSecret, 
 	salt,
 	isValidEmail, 
-	cookie_options
 } = require("../../config/config");
 const emailingFunction = require('../../helpers/emailingFunction');
 const { compileEmailTemplate } = require('../../helpers/emailTemplateHelper');
@@ -77,13 +76,11 @@ const signupFunction = async (req, res) => {
 
 		// Compile and send account sign up email
 		const signUpEmailData = {
-			logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+			logoUrl: `${process.env.ADMIN_CLIENT_URL}/dman-logo.png`, 
 			title: 'Account Sign up - DMAN Admin',
-			message: `
-				Please click the following link to verify your email: \n
-		 		${process.env.CLIENT_URL}/admin/sign-up-email-verification/${verificationToken}
-				`,
 			firstName: firstName,
+			// Pass the verification link directly to the template
+            verificationLink: verificationLink, 
 		};
 
 		const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
@@ -194,15 +191,10 @@ const resendSignUpVerificationEmailFunction = async (req, res) => {
 
 		// Compile and send account sign up email
 		const signUpEmailData = {
-			logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+			logoUrl: `${process.env.ADMIN_CLIENT_URL}/dman-logo.png`, 
 			title: 'Account Sign up - DMAN Admin',
-			message: `
-				Please click the following link to verify your email: 
-
-		 		${process.env.CLIENT_URL}/admin/sign-up-email-verification/${verificationToken}
-				
-				`,
 			firstName: user.firstName,
+			verificationLink: verificationLink, 
 		};
 
 		const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
@@ -261,11 +253,11 @@ const loginFunction = async (req, res) => {
 
 			// Compile and send account sign up email
 		    const signUpEmailData = {
-			    logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
+			    logoUrl: `${process.env.ADMIN_CLIENT_URL}/dman-logo.png`, 
 			    title: 'Account Sign up - DMAN Admin',
 			    message: `
 				    Please click the following link to verify your email: \n
-		 		    ${process.env.CLIENT_URL}/admin/sign-up-email-verification/${verificationToken}
+		 		    ${process.env.ADMIN_CLIENT_URL}/admin/sign-up-email-verification/${verificationToken}
 				`,
 			    firstName: user.firstName,
 		    };
@@ -277,7 +269,7 @@ const loginFunction = async (req, res) => {
 
 			return res.status(403).json({
 				error: 'Email is not verified!',
-				redirectUrl: `${process.env.CLIENT_URL}/admin/email-sent/${user._id}`,
+				redirectUrl: `${process.env.ADMIN_CLIENT_URL}/admin/email-sent/${user._id}`,
 				userId: user._id,
 				role: user.role,
 			});
@@ -334,39 +326,36 @@ const loginFunction = async (req, res) => {
 const forgotPasswordFunction = async (req, res) => {
     const { email } = req.body;
 
-    // Check if the email exists in the system
-    const user = await adminModel.findOne({ email });
-    if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-    }
+	try { 
+		// Check if the email exists in the system
+		const user = await adminModel.findOne({ email });
+		if (!user) {
+			return res.status(404).json({ message: 'User not found' });
+		}
 
-    // Generate JWT token with expiration
-    const resetToken = jwt.sign({ email }, jwt_secret, { expiresIn: '10m' });
+		// Generate JWT token with expiration
+		const resetToken = jwt.sign({ email }, jwt_secret, { expiresIn: '10m' });
 
-    // Generate reset link
-    const resetLink = `${process.env.CLIENT_URL}/admin/reset-password/${resetToken}`;
+		// Generate reset link
+		const resetLink = `${process.env.ADMIN_CLIENT_URL}/admin/reset-password/${resetToken}`;
 
-    // Compile and send reset password email
-    const resetPasswordData = {
-	    logoUrl: `${process.env.CLIENT_URL}/dman-logo.png`, 
-	    title: 'Reset Account Password - DMAN Admin',
-	    message: `
-		     Click the link below to reset your password: \n
-		     ${resetLink} \n
-			 This link will expire in 10 minutes. 
-			 If you did not request a password reset, 
-			 please ignore this email or contact our 
-			 support.	 
-		`,
-	    firstName: user.firstName,
-    };
+		// Compile and send reset password email
+		const resetPasswordData = {
+			logoUrl: `${process.env.ADMIN_CLIENT_URL}/dman-logo.png`, 
+			title: 'Reset Account Password - DMAN Admin',
+			// Pass the reset link directly to the template
+            resetLink: resetLink, 
+			firstName: user.firstName,
+		};
 
-    const resetPasswordHtml = compileEmailTemplate('passwordReset', resetPasswordData);
+		const resetPasswordHtml = compileEmailTemplate('passwordReset', resetPasswordData);
 
-    emailingFunction(email, 'Reset Password - DMAN Admin', resetPasswordHtml);
+		emailingFunction(email, 'Reset Password - DMAN Admin', resetPasswordHtml);
 
-    return res.status(200).json({ message: 'Password reset link has been sent to your email.' });
-
+		return res.status(200).json({ message: 'Password reset link has been sent to your email.' });
+	} catch (error) {
+		return res.status(500).json({ error: "Internal Server Error!"});
+	}
 };
 
 
@@ -459,7 +448,6 @@ const logoutFunction = (req, res) => {
         });
     }
 };
-
 
 
 
