@@ -74,6 +74,8 @@ const signupFunction = async (req, res) => {
             return res.status(401).json({ error: "Failed to create user account!" });
         }
 
+		const verificationLink = `${process.env.ADMIN_CLIENT_URL}/admin/sign-up-email-verification/${verificationToken}`;
+
 		// Compile and send account sign up email
 		const signUpEmailData = {
 			logoUrl: `${process.env.ADMIN_CLIENT_URL}/dman-logo.png`, 
@@ -189,6 +191,8 @@ const resendSignUpVerificationEmailFunction = async (req, res) => {
 			return res.status(401).json({ error: 'Failed to set veriication token' });
 		}
 
+		const verificationLink = `${process.env.ADMIN_CLIENT_URL}/admin/sign-up-email-verification/${verificationToken}`;
+
 		// Compile and send account sign up email
 		const signUpEmailData = {
 			logoUrl: `${process.env.ADMIN_CLIENT_URL}/dman-logo.png`, 
@@ -251,15 +255,14 @@ const loginFunction = async (req, res) => {
 				return res.status(401).json({ error: "Error setting verification token"})
 			}
 
+			const verificationLink = `${process.env.ADMIN_CLIENT_URL}/admin/sign-up-email-verification/${verificationToken}`
+
 			// Compile and send account sign up email
 		    const signUpEmailData = {
 			    logoUrl: `${process.env.ADMIN_CLIENT_URL}/dman-logo.png`, 
 			    title: 'Account Sign up - DMAN Admin',
-			    message: `
-				    Please click the following link to verify your email: \n
-		 		    ${process.env.ADMIN_CLIENT_URL}/admin/sign-up-email-verification/${verificationToken}
-				`,
 			    firstName: user.firstName,
+				verificationLink: verificationLink,
 		    };
 
 		    const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
@@ -320,7 +323,6 @@ const loginFunction = async (req, res) => {
 	}
 	
 };
-
 
 
 const forgotPasswordFunction = async (req, res) => {

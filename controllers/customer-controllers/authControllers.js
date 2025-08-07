@@ -267,15 +267,14 @@ const loginFunction = async (req, res) => {
 				return res.status(401).json({ error: "Error setting verification token"})
 			}
 
+			const verificationLink = `${process.env.CUSTOMER_CLIENT_URL}/sign-up-email-verification/${verificationToken}`;
+			
 			// Compile and send account sign up email
 		    const signUpEmailData = {
 			    logoUrl: `${process.env.CUSTOMER_CLIENT_URL}/dman-logo.png`, 
 			    title: 'Account Sign up - DMAN E-commerce',
-			    message: `
-				    Please click the following link to verify your email: \n
-		 		    ${process.env.CUSTOMER_CLIENT_URL}/sign-up-email-verification/${verificationToken}
-				`,
 			    firstName: user.firstName,
+			    verificationLink: verificationLink,
 		    };
 
 		    const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
@@ -383,7 +382,6 @@ const forgotPasswordFunction = async (req, res) => {
 };
 
 
-
   
 const resetPasswordFunction = async (req, res) => {
 	const { token, newPassword } = req.body;
@@ -417,7 +415,6 @@ const resetPasswordFunction = async (req, res) => {
 	}
 
 };
-  
 
 
 const refereshTokenFunction = async (req, res) => {
@@ -451,7 +448,6 @@ const refereshTokenFunction = async (req, res) => {
 	return res.status(200).json({ accessToken: newAccessToken });
 
 };
-
 
 
 // Logout Function
