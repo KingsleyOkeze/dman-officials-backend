@@ -52,7 +52,10 @@ const customerSchema = new mongoose.Schema({
         type: Date, // To track when the OTP will expire
         default: null,
     },
-
+    isDeleted: { 
+        type: Boolean, 
+        default: false 
+    },
 }, { timestamps: true });
 
 const customerModel = mongoose.model("customers", customerSchema);

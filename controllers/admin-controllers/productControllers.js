@@ -362,31 +362,43 @@ const fetchProductByIdFunction = async (req, res) => {
 
 
 const deleteProductFunction = async (req, res) => {
-  const { productId } = req.params;
+    const { productId } = req.params;
 
-  try {
-      // Validate productId
-      if (!productId) {
-          return res.status(400).json({ error: "Product ID is required!" });
-      }
+    try {
+        // Validate productId
+        if (!productId) {
+            return res.status(400).json({ error: "Product ID is required!" });
+        }
 
-      // Find and delete the product
-      const deletedProduct = await productModel.findByIdAndDelete(productId);
+        // Find the product
+        const product = await productModel.findById(productId);
 
-      if (!deletedProduct) {
-          return res.status(404).json({ error: "Product not found or already deleted!" });
-      }
-      console.log('product delete')
-      return res.status(200).json({
-          message: "Product deleted successfully!",
-          deletedProduct,
-      });
-  } catch (error) {
-      console.error("Error deleting product:", error);
-      return res.status(500).json({ error: "Internal Server Error!" });
-  }
+        if (!product) {
+            return res.status(404).json({ error: "Product not found!" });
+        }
+
+        // If already marked as deleted
+        if (product.isDeleted) {
+            return res.status(410).json({ error: "Product is already deleted!" });
+        }
+
+        // Mark as deleted
+        product.isDeleted = true;
+        product.productStatus = 'Discontinued';
+
+        await product.save();
+
+        console.log('Product soft-deleted', product._id);
+        return res.status(200).json({
+            message: "Product deleted successfully (soft delete).",
+            product,
+        });
+
+    } catch (error) {
+        console.error("Error deleting product:", error);
+        return res.status(500).json({ error: "Internal Server Error!" });
+    }
 };
-
 
 
 

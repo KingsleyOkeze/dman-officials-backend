@@ -18,7 +18,10 @@ const fetchCartFunction = async (req, res) => {
         const cartItems = await cartModel
             .find({ customerRef: customerId })
             .sort({ createdAt: -1 })
-            .populate('productRef');
+            .populate({
+                path: 'productRef',
+                match: { isDeleted: false }, // Only fetch if not deleted
+            });
   
         if (cartItems.length === 0) {
             return res.status(200).json({ message: "Cart is empty!", cart: [] });
@@ -49,12 +52,16 @@ const fetchCartTotalPriceFunction = async (req, res) => {
 
         const cartItems = await cartModel
             .find({ customerRef: customerId })
-            .populate('productRef');
+            .populate({
+                path: 'productRef',
+                match: { isDeleted: false } 
+            });
 
         let totalPrice = 0;
 
         for (let i = 0; i < cartItems.length; i++) {
             const item = cartItems[i];
+            if (!item.productRef) continue; // Skip deleted
             totalPrice += item.productRef.productOfferPrice * item.quantity
         }
 
@@ -73,7 +80,7 @@ const fetchCartTotalPriceFunction = async (req, res) => {
 const addToCartFunction = async (req, res) => {
   const { customerId, productId, quantity } = req.body;
   console.log('cart stuff', customerId, productId, quantity )
-  try {
+    try {
       // Validate input
       if (!customerId) {
           return res.status(400).json({ error: "Customer ID are required!" });
@@ -90,11 +97,12 @@ const addToCartFunction = async (req, res) => {
           return res.status(404).json({ error: "Customer not found!" });
       }
 
-      // Check if the product exists
-      const product = await productModel.findById(productId);
-      if (!product) {
-          return res.status(404).json({ error: "Product not found!" });
-      }
+        // Check if the product exists
+        const product = await productModel.findById(productId);
+        if (!product || product.isDeleted) {
+            return res.status(404).json({ error: "Product not found or has been discontinued!" });
+        }
+
 
       // Check if the product is already in the cart
       const existingCartItem = await cartModel.findOne({ customerRef: customerId, productRef: productId });
@@ -263,12 +271,16 @@ const placeOrderFunction = async (req, res) => {
         // FETCH CART ITEMS FOR CUSTOMER AND CALCULATE TOTAL PRICE
         const cartItems = await cartModel
             .find({ customerRef: customerId })
-            .populate('productRef');
+            .populate({
+                path: 'productRef',
+                match: { isDeleted: false } 
+            });
            
         let cartTotalPurchase = 0;
 
         for (let i = 0; i < cartItems.length; i++) {
             const item = cartItems[i];
+            if (!item.productRef) continue; // ⬅️ skip deleted
             cartTotalPurchase += item.productRef.productOfferPrice * item.quantity
         }
 

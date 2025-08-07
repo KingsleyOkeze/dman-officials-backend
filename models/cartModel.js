@@ -16,6 +16,10 @@ const cartSchema = new mongoose.Schema({
         required: true, 
         default: 1 
     }, 
+    isDeleted: { 
+        type: Boolean, 
+        default: false 
+    },
        
 }, { timestamps: true });
 

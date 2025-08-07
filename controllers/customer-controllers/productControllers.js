@@ -13,7 +13,7 @@ const fetchFlashSaleProductFunction = async (req, res) => {
             addedTimer: true,
             timerExpiryDate: { $gt: currentDate } // Only products with expiry dates in the future
         })
-        .sort({ createdAt: -1 }) // Sort by creation date (newest first)
+        .sort({ createdAt: -1, isDeleted: false }) // Sort by creation date (newest first)
         .skip(page * limit)
         .limit(limit); // Limit to the limit value
 
@@ -53,13 +53,23 @@ const fetchExploreProductsFunction = async (req, res) => {
         // Fetch 3 random products from each category
         const menWearProducts = await productModel
             .aggregate([
-                { $match: { productCategory: 'MenWear' } }, // Filter category
+                { 
+                    $match: { 
+                        productCategory: 'MenWear',
+                        isDeleted: false // Exclude deleted products
+                    } 
+                }, // Filter category
                 { $sample: { size: 3 } } // Randomly select 3 documents
             ]);
 
         const footwearProducts = await productModel
             .aggregate([
-                { $match: { productCategory: 'FootWear' } },
+                { 
+                    $match: { 
+                        productCategory: 'FootWear',
+                        isDeleted: false // Exclude deleted products
+                    } 
+                },
                 { $sample: { size: 3 } }
             ]);
         
@@ -76,7 +86,7 @@ const fetchExploreProductsFunction = async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching explore products:', error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: 'Failed to fetch explore products.',
         });
@@ -94,13 +104,13 @@ const fetchTrendingNowProductFunction = async (req, res) => {
         
         const mensWearLatestProducts = await productModel
             .find({ productCategory: 'MensWear' })
-            .sort({ createdAt: -1 })
+            .sort({ createdAt: -1, isDeleted: false })
             .skip(page * limit)
             .limit(limit); 
 
         const footwearLatestProducts = await productModel
             .find({ productCategory: 'FootWear' })
-            .sort({ createdAt: -1 })
+            .sort({ createdAt: -1, isDeleted: false })
             .skip(page * limit)
             .limit(limit); 
 
@@ -134,12 +144,12 @@ const searchProductFunction = async (req, res) => {
         const currentPage = parseInt(page) || 0;
         const skip = (currentPage) * itemsPerPage;
 
-        let sortOptions = {};  // Set default sorting options
+        let sortOptions = { isDeleted: false };  // Set default sorting options
         
         if (sortBy === 'latest') {
-            sortOptions = { createdAt: -1 };  // Sort by latest (descending)
+            sortOptions = { createdAt: -1, isDeleted: false };  // Sort by latest (descending)
         } else if (sortBy === 'oldest') {
-            sortOptions = { createdAt: 1 };  // Sort by oldest (ascending)
+            sortOptions = { createdAt: 1, isDeleted: false };  // Sort by oldest (ascending)
         }
     
         // Build the search filter
@@ -240,9 +250,9 @@ const fetchProductsByCategoryFunction = async (req, res) => {
         let sortOptions = {};  // Set default sorting options
         
         if (sortBy === 'latest') {
-            sortOptions = { createdAt: -1 };  // Sort by latest (descending)
+            sortOptions = { createdAt: -1, isDeleted: false };  // Sort by latest (descending)
         } else if (sortBy === 'oldest') {
-            sortOptions = { createdAt: 1 };  // Sort by oldest (ascending)
+            sortOptions = { createdAt: 1, isDeleted: false };  // Sort by oldest (ascending)
         }
 
 

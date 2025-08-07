@@ -268,7 +268,7 @@ const loginFunction = async (req, res) => {
 			}
 
 			const verificationLink = `${process.env.CUSTOMER_CLIENT_URL}/sign-up-email-verification/${verificationToken}`;
-			
+
 			// Compile and send account sign up email
 		    const signUpEmailData = {
 			    logoUrl: `${process.env.CUSTOMER_CLIENT_URL}/dman-logo.png`, 
@@ -452,8 +452,8 @@ const refereshTokenFunction = async (req, res) => {
 
 // Logout Function
 const logoutFunction = async (req, res) => {
-	const { customerId, activity, sessionDuration, ip } = req.body;
-	console.log('logout extra details', customerId, activity, sessionDuration, ip);
+	const { customerId } = req.body;
+	console.log('logout extra details', customerId);
         
 	try {
         // Clear the refreshToken cookie
@@ -463,16 +463,6 @@ const logoutFunction = async (req, res) => {
 			sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // 'None' in prod, 'Lax' in dev
 		});
 
-		// Save logout customer activity
-        await activityLogsModel.create({
-            customerRef: customerId,
-            activityType: activity || "Logout", // Default to "logout"
-            sessionDuration: sessionDuration || 0, // Ensure session duration is set
-            ipAddress: ip || "Unknown", // Handle missing IP gracefully
-        });
-
-		console.log(`User ${customerId} logged out after ${sessionDuration} sec time.`);
-        // console.log(`User ${customerId} logged out successfully.`);
         return res.status(200).json({
             message: "Logged out successfully",
         });

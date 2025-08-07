@@ -161,8 +161,6 @@ const updateCustomerAccountPassword = async (req, res) => {
 
 
 
-
-
 const fetchSavedProductFunction = async (req, res) => {
     const page = req.query.page || 0;
     const limit = req.query.limit || 5;
@@ -186,7 +184,7 @@ const fetchSavedProductFunction = async (req, res) => {
             return res.status(200).json({ message: "Saved products is empty!", savedProducts });
         }
   
-  console.log('fetch savedProducts is', savedProducts);
+        console.log('fetch savedProducts is', savedProducts);
   
         // Get the exact document count
         const totalSavedProductsCountInDb = await savedProductModel.countDocuments(); 

@@ -74,7 +74,11 @@ const productSchema = new mongoose.Schema({
             'SaleEnded'
         ], // Define the possible statuses
         default: 'Available' // Default status when a product is created
-    }
+    },
+    isDeleted: { 
+        type: Boolean, 
+        default: false 
+    },
 
 }, { timestamps: true });
 
