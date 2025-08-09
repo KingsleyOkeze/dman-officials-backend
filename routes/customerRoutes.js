@@ -16,7 +16,8 @@ const {
     fetchFlashSaleProductFunction,
     fetchExploreProductsFunction,
     fetchTrendingNowProductFunction,
-    searchProductFunction, 
+    searchProductFunction,
+    fetchRecommendedProductFunction, 
 } = require("../controllers/customer-controllers/productControllers");
 const { 
     addToCartFunction, 
@@ -65,7 +66,7 @@ router.get("/flash-sale-products", fetchFlashSaleProductFunction);
 router.get("/fetch-explore-products", fetchExploreProductsFunction);
 router.get("/fetch-product-details/:productId", fetchProductDetailsFunction);
 router.get("/fetch-trending-now-products", fetchTrendingNowProductFunction);
-
+router.get("/recommended-product/:productId", fetchRecommendedProductFunction);
 router.get("/search-product", searchProductFunction);
 
 // ACCOUNT ROUTES

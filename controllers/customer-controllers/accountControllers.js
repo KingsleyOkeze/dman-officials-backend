@@ -152,10 +152,10 @@ const updateCustomerAccountPassword = async (req, res) => {
             return res.status(401).json({ error: "Password failed to update!"})
         }
 
-        res.status(200).json({ message: 'Password updated successfully.' });
+        return res.status(200).json({ message: 'Password updated successfully.' });
     } catch (error) {
         console.error('Error updating password:', error);
-        res.status(500).json({ error: 'Internal Server Error!' });
+        return res.status(500).json({ error: 'Internal Server Error!' });
     }
 };
 
@@ -178,7 +178,7 @@ const fetchSavedProductFunction = async (req, res) => {
             .sort({ createdAt: -1 }) // Sort by most recent orders
             .skip(page * limit)
             .limit(limit)
-            .populate('productRef', '_id productName productImageUrl productSize productColor productOfferPrice');
+            .populate('productRef', '_id productName productImageUrl productSize productColor productOfferPrice isDeleted');
   
         if (savedProducts.length === 0) {
             return res.status(200).json({ message: "Saved products is empty!", savedProducts });
@@ -204,10 +204,7 @@ const fetchSavedProductFunction = async (req, res) => {
         console.log('error fetching saved product', error)
         return res.status(500).json({ error: "Internal Server Error!" });
     }
-  };
-
-
-
+};
 
 
 
@@ -286,13 +283,13 @@ const removeFromSavedProductFunction = async (req, res) => {
   
         // Remove the product from the Saved Products
         const removedSavedItem = await savedProductModel.findOneAndDelete({ 
-          productRef: itemId,
+          _id: itemId,
           customerRef: customerId, 
         });
   
         if (!removedSavedItem) {
           console.log("remove save stuff err", removedSavedItem)
-            return res.status(404).json({ error: "Product not found in cart!" });
+            return res.status(404).json({ error: "Product not found in saved list!" });
         }
   
         // Fetch updated cart
@@ -310,9 +307,6 @@ const removeFromSavedProductFunction = async (req, res) => {
         return res.status(500).json({ error: "Internal Server Error!" });
     }
 };
-  
-  
-
 
 
 
@@ -320,7 +314,9 @@ const fetchAllCustomerOrdersFunction = async (req, res) => {
     const page = req.query.page || 0;
     const limit = req.query.limit || 5;
     const { customerId } = req.query;
-console.log('feetching customer order info', page, limit, customerId)
+
+    console.log('feetching customer order info', page, limit, customerId);
+
     try {
         if (!customerId) {
             return res.status(401).json({ error: "Unauthorized access!" });
@@ -398,14 +394,12 @@ const fetchPurchasedOrderDetailsFunction = async (req, res) => {
             message: "Order fetched successfully!",
             order
         });
+
     } catch (error) {
         console.log( "Internal Server Error!", error);
         return res.status(500).json({ error: "Internal Server Error!"});
     }
-}
-
-
-
+};
 
 
 

@@ -11,9 +11,10 @@ const fetchFlashSaleProductFunction = async (req, res) => {
         // Fetch products with `addedTimer` set to true and check if `timerExpiryDate` has not expired
         const flashSaleProducts = await productModel.find({
             addedTimer: true,
-            timerExpiryDate: { $gt: currentDate } // Only products with expiry dates in the future
+            timerExpiryDate: { $gt: currentDate }, // Only products with expiry dates in the future
+            isDeleted: false
         })
-        .sort({ createdAt: -1, isDeleted: false }) // Sort by creation date (newest first)
+        .sort({ createdAt: -1 }) // Sort by creation date (newest first)
         .skip(page * limit)
         .limit(limit); // Limit to the limit value
 
@@ -41,9 +42,6 @@ const fetchFlashSaleProductFunction = async (req, res) => {
         });
     }
 };
-
-
-
 
 
 const fetchExploreProductsFunction = async (req, res) => {
@@ -103,14 +101,14 @@ const fetchTrendingNowProductFunction = async (req, res) => {
     try {
         
         const mensWearLatestProducts = await productModel
-            .find({ productCategory: 'MensWear' })
-            .sort({ createdAt: -1, isDeleted: false })
+            .find({ productCategory: 'MensWear', isDeleted: false })
+            .sort({ createdAt: -1 })
             .skip(page * limit)
             .limit(limit); 
 
         const footwearLatestProducts = await productModel
-            .find({ productCategory: 'FootWear' })
-            .sort({ createdAt: -1, isDeleted: false })
+            .find({ productCategory: 'FootWear', isDeleted: false })
+            .sort({ createdAt: -1 })
             .skip(page * limit)
             .limit(limit); 
 
@@ -132,6 +130,45 @@ const fetchTrendingNowProductFunction = async (req, res) => {
 }
 
 
+const fetchRecommendedProductFunction = async (req, res) => {
+    const { productId } = req.params;
+    console.log("recommended of ", productId)
+    try {
+        const currentProduct = await productModel.findById(productId);
+
+        if (!currentProduct) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        // Build a query for similar products
+        const recommendedProducts = await productModel.find({
+            $or: [
+                // Priority 1: Same sub-category
+                { productSubCategory: currentProduct.productSubCategory, _id: { $ne: currentProduct._id } },
+                // Priority 2: Same category
+                { productCategory: currentProduct.productCategory, _id: { $ne: currentProduct._id } },
+                // Priority 3: Same brand
+                { productBrand: currentProduct.productBrand, _id: { $ne: currentProduct._id } }
+            ]
+        }).limit(8) // Limit to a reasonable number of recommendations
+        .select('productImageUrl productName productDescription productColor productPrice')
+
+        // Fallback to random if no similar products are found
+        if (recommendedProducts.length === 0) {
+            const randomProducts = await productModel.aggregate([
+                { $sample: { size: 8 } },
+                { $project: { productImageUrl: 1, productName: 1, productDescription: 1, productColor: 1, productPrice: 1 } }
+            ]);
+            return res.status(200).json({ products: randomProducts });
+        }
+
+        return res.status(200).json({ products: recommendedProducts });
+    } catch (error) {
+        console.error("Errror fetching recommended product", error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
 
 const searchProductFunction = async (req, res) => {
     // Extract the search input from query
@@ -144,18 +181,20 @@ const searchProductFunction = async (req, res) => {
         const currentPage = parseInt(page) || 0;
         const skip = (currentPage) * itemsPerPage;
 
-        let sortOptions = { isDeleted: false };  // Set default sorting options
-        
+        // Default filter: exclude deleted products
+        let filterQuery = { isDeleted: false };
+        let sortOptions = { createdAt: -1 }; // default to newest first
+
+        // Sorting logic
         if (sortBy === 'latest') {
-            sortOptions = { createdAt: -1, isDeleted: false };  // Sort by latest (descending)
+            sortOptions = { createdAt: -1 }; // latest first
         } else if (sortBy === 'oldest') {
-            sortOptions = { createdAt: 1, isDeleted: false };  // Sort by oldest (ascending)
+            sortOptions = { createdAt: 1 }; // oldest first
         }
     
         // Build the search filter
-        const filters = {};
         if (searchInput) {
-            filters.$or = [
+            filterQuery.$or = [
               { productName: { $regex: searchInput, $options: "i" } }, // Case-insensitive match on product name
               { productCategory: { $regex: searchInput, $options: "i" } }, // Case-insensitive match on category
               { productSubCategory: { $regex: searchInput, $options: "i" } }  // Case-insensitive match on subcategory
@@ -163,15 +202,16 @@ const searchProductFunction = async (req, res) => {
         } 
     
         // Query the database
-        const products = await productModel.find(filters)
+        const products = await productModel.find(filterQuery)
           .sort(sortOptions)
           .skip(skip)
           .limit(itemsPerPage);
     
         // Count total products for pagination
-        const totalProducts = await productModel.countDocuments(filters);
+        const totalProducts = await productModel.countDocuments(filterQuery);
     
         console.log('search result is', products);
+
         // Send the results to the client
         return res.status(200).json({
           success: true,
@@ -195,92 +235,83 @@ const fetchProductsByCategoryFunction = async (req, res) => {
         page = 0,
         limit = 12,
         searchInput
-    } = req.query;  // Destructure the query parameters
-    console.log('category function called', category,  subCategory, sortBy, page, limit)
+    } = req.query;
+
+    console.log('category function called', category, subCategory, sortBy, page, limit);
+
     try {
-        // Let check if category is other category not defined in the
-        // enum of productCategory in our productModel e.g "TrendingNow"
-        // "NewArrival", "Explore" "FlashSale" "search" etc...
+        // Special categories (delegate to other functions)
         if (category === "TrendingNow") {
-             // Pass page and limit directly to fetchTrendingNowProductFunction
-             req.query.page = page; // Ensure the page value is in req.query
-             req.query.limit = limit; // Ensure the limit value is in req.query
- 
-             // Call the function with req and res
-             return await fetchTrendingNowProductFunction(req, res);
+            req.query.page = page;
+            req.query.limit = limit;
+            return await fetchTrendingNowProductFunction(req, res);
         }
 
         if (category === "Explore") {
-            req.query.page = page; 
+            req.query.page = page;
             req.query.limit = limit;
-
             return await fetchExploreProductsFunction(req, res);
         }
 
         if (category === "Sale") {
-            req.query.page = page; 
+            req.query.page = page;
             req.query.limit = limit;
-
             return await fetchFlashSaleProductFunction(req, res);
         }
 
         if (category === "search") {
-            req.query.page = page; 
+            req.query.page = page;
             req.query.limit = limit;
             req.query.sortBy = sortBy;
             req.query.searchInput = searchInput;
-
-            // Call the function with req and res
             return await searchProductFunction(req, res);
-       }
+        }
 
-        const query = {};  // Initialize the query filter
-        
-        // If a category is selected, add it to the filter
+        // Default filter: exclude deleted products
+        const query = { isDeleted: false };
+
+        // Add category filter
         if (category) {
             query.productCategory = category;
         }
 
-        // Add subCategory filter if it exists
+        // Add subCategory filter
         if (subCategory) {
             query.productSubCategory = subCategory;
         }
 
-
-        let sortOptions = {};  // Set default sorting options
-        
+        // Sorting options
+        let sortOptions = { createdAt: -1 }; // default newest first
         if (sortBy === 'latest') {
-            sortOptions = { createdAt: -1, isDeleted: false };  // Sort by latest (descending)
+            sortOptions = { createdAt: -1 };
         } else if (sortBy === 'oldest') {
-            sortOptions = { createdAt: 1, isDeleted: false };  // Sort by oldest (ascending)
+            sortOptions = { createdAt: 1 };
         }
 
+        // Pagination
+        const skip = parseInt(page) * parseInt(limit);
 
-        // Fetch the products from MongoDB with the applied filters and sorting
-        const products = await productModel.find(query).sort(sortOptions);
+        // Fetch products
+        const products = await productModel.find(query)
+            .sort(sortOptions)
+            .skip(skip)
+            .limit(parseInt(limit));
 
-        // Get the exact document count
-        const totalProductsCountInDb = await productModel.countDocuments(); 
-        console.log("total document in db", totalProductsCountInDb);
-        const numberOfProductsToReturn = limit;
-
-        // Calculate the total number of pages
-        const totalPages = Math.ceil(totalProductsCountInDb / numberOfProductsToReturn); 
-        console.log("total pages for this product category", totalPages);
+        // Count total
+        const totalProductsCountInDb = await productModel.countDocuments(query);
+        const totalPages = Math.ceil(totalProductsCountInDb / parseInt(limit));
 
         return res.status(200).json({
-            result: products, 
+            result: products,
             totalPages,
-            message: "Successfully fetched Orders!"
+            message: "Successfully fetched products!"
         });
 
     } catch (error) {
-        console.log("Server Error fetching orders", error)
-        return res.status(500).json({ error: "Internal Server Error!"})
+        console.log("Server Error fetching products", error);
+        return res.status(500).json({ error: "Internal Server Error!" });
     }
-
 };
-
 
 
 
@@ -317,6 +348,7 @@ module.exports = {
     fetchFlashSaleProductFunction,
     fetchExploreProductsFunction,
     fetchTrendingNowProductFunction,
+    fetchRecommendedProductFunction,
     fetchProductDetailsFunction,
     searchProductFunction
 };

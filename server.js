@@ -72,3 +72,6 @@ mongoose.connect(process.env.MONGODB_URL).then(() => {
 
 app.use("/admin", adminRoutes);
 app.use("/customer", customerRoutes);
+
+
+

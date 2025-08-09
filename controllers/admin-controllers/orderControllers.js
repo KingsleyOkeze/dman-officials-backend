@@ -11,12 +11,12 @@ const fetchOrdersFunction = async (req, res) => {
     console.log('fetch query is', orderStatus );
     try {
         if (orderStatus && orderStatus !== "AllOrders") {
-            query = { orderStatus: orderStatus }
+            query = { orderStatus: orderStatus, isDeleted: false }
         } 
         
         // Get the portions of the pagination requested
         const allOrders = await orderModel.find(query)
-            .sort({ createdAt: -1, isDeleted: false })
+            .sort({ createdAt: -1 })
             .populate("customerRef")
             .skip(page * numberOfItemsToReturn)
             .limit(numberOfItemsToReturn)
@@ -39,7 +39,12 @@ const fetchOrdersFunction = async (req, res) => {
         const totalPages = Math.ceil(totalOrderCountInDb / numberOfItemsToReturn); 
         console.log("total pages", totalPages);
 
-        return res.status(200).json({result: allOrders, totalPages, message: "Successfully fetched Orders!"});
+        return res.status(200).json({
+            result: allOrders, 
+            currentPage: page,
+            totalPages, 
+            message: "Successfully fetched Orders!"
+        });
 
     } catch (error) {
         console.log("Server Error fetching orders", error)

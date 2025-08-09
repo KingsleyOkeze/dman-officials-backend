@@ -10,22 +10,27 @@ const fetchCustomersFunction = async (req, res) => {
     const numberOfCustomersToReturn = req.query.limit || 7;
     const sortBy = req.query.sortBy; 
 
+    let filterQuery = {};
     let sortQuery = {};
     
     try {
         if (sortBy === "Oldest") {
-            sortQuery = { createdAt: 1, isDeleted: false }; // Sort by oldest first
+            filterQuery = { isDeleted: false };
+            sortQuery = { createdAt: 1 }; // oldest first
         } else if (sortBy === "Newest") {
-            sortQuery = { createdAt: -1, isDeleted: false }; // Sort by newest first
+            filterQuery = { isDeleted: false };
+            sortQuery = { createdAt: -1 }; // newest first
         } else if (sortBy === "Deleted") {
-            sortQuery = { createdAt: -1, isDeleted: true };
+            filterQuery = { isDeleted: true };
+            sortQuery = { createdAt: -1 };
         } else {
-            sortQuery = { createdAt: -1 }; // Default sorting (newest first)
+            filterQuery = {}; // no filter
+            sortQuery = { createdAt: -1 }; // default newest first
         }
 
 
         // Get the portions of the pagination requested
-        const allCustomers = await customerModel.find() 
+        const allCustomers = await customerModel.find(filterQuery) 
             .sort(sortQuery)
             .skip(page * numberOfCustomersToReturn)
             .limit(numberOfCustomersToReturn)
@@ -36,7 +41,7 @@ const fetchCustomersFunction = async (req, res) => {
         }
 
         // Get the exact document count
-        const totalCustomersCountInDb = await customerModel.countDocuments(); 
+        const totalCustomersCountInDb = await customerModel.countDocuments(filterQuery); 
         console.log("total document in db", totalCustomersCountInDb);
 
         // Calculate the total number of pages

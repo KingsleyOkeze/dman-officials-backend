@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require('fs');
 const { cloudinary } = require('../../config/config');
 const productModel = require("../../models/productModel");
+const cartModel = require("../../models/cartModel");
 
 const fetchProductsFunction = async (req, res) => {
     const page = req.query.page || 0;
@@ -10,7 +11,7 @@ const fetchProductsFunction = async (req, res) => {
 
     try {
       // Get the portions of the pagination requested
-      const allProducts = await productModel.find()
+      const allProducts = await productModel.find({ isDeleted: false })
           .sort({ createdAt: -1 })
           .skip(page * numberOfProductsToReturn)
           .limit(numberOfProductsToReturn)
@@ -21,7 +22,7 @@ const fetchProductsFunction = async (req, res) => {
       }
 
       // Get the exact document count
-      const totalProductsCountInDb = await productModel.countDocuments(); 
+      const totalProductsCountInDb = await productModel.countDocuments({ isDeleted: false }); 
       console.log("total document in db", totalProductsCountInDb);
 
       // Calculate the total number of pages
@@ -389,6 +390,11 @@ const deleteProductFunction = async (req, res) => {
         await product.save();
 
         console.log('Product soft-deleted', product._id);
+
+        // When an admin deletes a product, also run:
+        await cartModel.deleteMany({ productRef: productId });
+        // That way, the carts never even holds orphaned items.
+
         return res.status(200).json({
             message: "Product deleted successfully (soft delete).",
             product,

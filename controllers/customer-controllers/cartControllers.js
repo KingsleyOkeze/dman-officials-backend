@@ -15,19 +15,24 @@ const fetchCartFunction = async (req, res) => {
         }
   
         // Fetch cart items with product details
-        const cartItems = await cartModel
+        let cartItems = await cartModel
             .find({ customerRef: customerId })
             .sort({ createdAt: -1 })
             .populate({
                 path: 'productRef',
                 match: { isDeleted: false }, // Only fetch if not deleted
+                select: 'productName productSize productPrice productColor productImageUrl'
             });
   
         if (cartItems.length === 0) {
             return res.status(200).json({ message: "Cart is empty!", cart: [] });
         }
+
+        // You need to filter out cart items without missing products reference
+        // Reason being in the case where a product isDeleted
+        cartItems = cartItems.filter(item => item.productRef !== null);
   
-        // console.log('fetch cart is', cartItems);
+        console.log('fetch cart is', cartItems);
         return res.status(200).json({ cart: cartItems });
     } catch (error) {
         return res.status(500).json({ error: "Internal Server Error!" });
