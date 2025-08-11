@@ -84,14 +84,42 @@ const productSchema = new mongoose.Schema({
 
 
 // Indexing Strategy:
-productSchema.index({ 
-    productName: 1, 
-    productCategory: 1, 
-    productStatus: 1, 
-    productPrice: 1
+// Text Search Index (for productName, category, subCategory)
+productSchema.index({
+    productName: 'text',
+    productCategory: 'text',
+    productSubCategory: 'text'
+}, {
+    weights: {
+        productName: 3,
+        productCategory: 2,
+        productSubCategory: 2
+    },
+    name: 'product_search_index'
 });
 
+// Indexes for category browsing
+productSchema.index({ 
+    productCategory: 1,
+    productSubCategory: 1,
+    createdAt: -1 
+});
+
+// Index for filter by status
+productSchema.index({ 
+  isDeleted: 1,
+  productStatus: 1 
+});
+
+// Index for general queries
+productSchema.index({ 
+    isDeleted: 1,
+    createdAt: -1 
+});
 
 const productModel = mongoose.model("products", productSchema);
 
 module.exports = productModel;
+
+
+
