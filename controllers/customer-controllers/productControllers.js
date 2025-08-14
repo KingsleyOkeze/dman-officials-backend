@@ -3,7 +3,13 @@ const productModel = require("../../models/productModel");
 
 const fetchFlashSaleProductFunction = async (req, res) => {
     // Destructure and set default values for query parameters
-    const { page = 0, limit = 6, sortBy = 'latest', searchInput } = req.query;
+    const { 
+        page = 0, 
+        limit = 6, 
+        sortBy = 'latest', 
+        searchInput, 
+        subCategory 
+    } = req.query;
 
     try {
         // Get current date to check for active flash sales
@@ -22,9 +28,18 @@ const fetchFlashSaleProductFunction = async (req, res) => {
             isDeleted: false
         };
 
+        // Add subCategory filter if not "All"
+        if (subCategory && subCategory !== "All") {
+            query.productSubCategory = subCategory;
+        }
+
         // Add text search to query if searchInput provided
         if (searchInput) {
-            query.$text = { $search: searchInput };
+            query.$text = { 
+                $search: searchInput,
+                $caseSensitive: false,
+                $diacriticSensitive: false 
+            };
         }
 
         // Fetch products with applied filters, sorting, and pagination
@@ -51,7 +66,13 @@ const fetchFlashSaleProductFunction = async (req, res) => {
 
 const fetchExploreProductsFunction = async (req, res) => {
     // Destructure and set default values for query parameters
-    const { page = 0, limit = 3, sortBy = 'latest', searchInput } = req.query;
+    const { 
+        page = 0, 
+        limit = 3, 
+        sortBy = 'latest', 
+        searchInput, 
+        subCategory 
+    } = req.query;
 
     try {
         // Determine sort order based on sortBy parameter
@@ -62,26 +83,34 @@ const fetchExploreProductsFunction = async (req, res) => {
 
         // Add text search to query if searchInput provided
         if (searchInput) {
-            query.$text = { $search: searchInput };
+            query.$text = { 
+                $search: searchInput,
+                $caseSensitive: false,
+                $diacriticSensitive: false 
+            };
         }
 
-        // Fetch MensWear products with applied filters
-        const mensWear = await productModel.find({ 
-            ...query, 
-            productCategory: 'MensWear' 
-        })
-        .sort(sortOrder)
-        .skip(page * limit)
-        .limit(limit);
+        // Build separate queries for each category with subCategory filter
+        const mensWearQuery = { ...query, productCategory: 'MensWear' };
+        if (subCategory && subCategory !== "All") {
+            mensWearQuery.productSubCategory = subCategory;
+        }
 
-        // Fetch FootWear products with same filters
-        const footWear = await productModel.find({ 
-            ...query, 
-            productCategory: 'FootWear' 
-        })
-        .sort(sortOrder)
-        .skip(page * limit)
-        .limit(limit);
+        const footWearQuery = { ...query, productCategory: 'FootWear' };
+        if (subCategory && subCategory !== "All") {
+            footWearQuery.productSubCategory = subCategory;
+        }
+
+        // Fetch products
+        const mensWear = await productModel.find(mensWearQuery)
+            .sort(sortOrder)
+            .skip(page * limit)
+            .limit(limit);
+
+        const footWear = await productModel.find(footWearQuery)
+            .sort(sortOrder)
+            .skip(page * limit)
+            .limit(limit);
 
         // Combine results from both categories
         const exploreProducts = [...mensWear, ...footWear];
@@ -102,7 +131,13 @@ const fetchExploreProductsFunction = async (req, res) => {
 
 const fetchTrendingNowProductFunction = async (req, res) => {
     // Destructure and set default values for query parameters
-    const { page = 0, limit = 6, sortBy = 'latest', searchInput } = req.query;
+    const { 
+        page = 0, 
+        limit = 6, 
+        sortBy = 'latest', 
+        searchInput, 
+        subCategory 
+    } = req.query;
 
     try {
         // Determine sort order based on sortBy parameter
@@ -116,23 +151,27 @@ const fetchTrendingNowProductFunction = async (req, res) => {
             query.$text = { $search: searchInput };
         }
 
-        // Fetch MensWear products with applied filters
-        const mensWear = await productModel.find({ 
-            ...query, 
-            productCategory: 'MensWear' 
-        })
-        .sort(sortOrder)
-        .skip(page * limit)
-        .limit(limit);
+        // Fetch MensWear products with subCategory filter if not "All"
+        const mensWearQuery = { ...query, productCategory: 'MensWear' };
+        if (subCategory && subCategory !== "All") {
+            mensWearQuery.productSubCategory = subCategory;
+        }
+        
+        const mensWear = await productModel.find(mensWearQuery)
+            .sort(sortOrder)
+            .skip(page * limit)
+            .limit(limit);
 
-        // Fetch FootWear products with same filters
-        const footWear = await productModel.find({ 
-            ...query, 
-            productCategory: 'FootWear' 
-        })
-        .sort(sortOrder)
-        .skip(page * limit)
-        .limit(limit);
+        // Fetch FootWear products with same subCategory filter
+        const footWearQuery = { ...query, productCategory: 'FootWear' };
+        if (subCategory && subCategory !== "All") {
+            footWearQuery.productSubCategory = subCategory;
+        }
+        
+        const footWear = await productModel.find(footWearQuery)
+            .sort(sortOrder)
+            .skip(page * limit)
+            .limit(limit);
 
         // Combine results from both categories
         const trendingProducts = [...mensWear, ...footWear];
@@ -170,7 +209,7 @@ const fetchRecommendedProductFunction = async (req, res) => {
                 { productBrand: currentProduct.productBrand, _id: { $ne: currentProduct._id } }
             ]
         }).limit(8) // Limit to a reasonable number of recommendations
-        .select('productImageUrl productName productDescription productColor productPrice')
+        .select('productImageUrl productName productDescription productBrand productCategory productColor productPrice')
 
         // Fallback to random if no similar products are found
         if (recommendedProducts.length === 0) {
@@ -190,7 +229,13 @@ const fetchRecommendedProductFunction = async (req, res) => {
 
 
 const searchProductFunction = async (req, res) => {
-    const { searchInput, limit, page, sortBy } = req.query;
+    const { 
+        searchInput, 
+        limit, 
+        page, 
+        sortBy, 
+        subCategory 
+    } = req.query;
 
     try {
         // Pagination setup (unchanged from your original)
@@ -198,9 +243,13 @@ const searchProductFunction = async (req, res) => {
         const currentPage = parseInt(page) || 0;
         const skip = currentPage * itemsPerPage;
 
-        // Default filter (unchanged)
         let filterQuery = { isDeleted: false };
         let sortOptions = { createdAt: -1 }; // default newest first
+
+        // Add subCategory filter if not "All"
+        if (subCategory && subCategory !== "All") {
+            filterQuery.productSubCategory = subCategory;
+        }
 
         // Sorting logic (unchanged)
         if (sortBy === 'latest') {
@@ -255,12 +304,14 @@ const fetchProductsByCategoryFunction = async (req, res) => {
         limit = 12,
         searchInput
     } = req.query;
-console.log('fetch by category called', category, 
+
+    console.log('fetch by category called', category, 
         subCategory, 
         sortBy,
         page,
         limit,
-        searchInput)
+        searchInput);
+        
     try {
         // Handle special categories
         if (category === "TrendingNow") {
@@ -289,7 +340,11 @@ console.log('fetch by category called', category,
         // Default filter 
         const query = { isDeleted: false };
         if (category) query.productCategory = category;
-        if (subCategory) query.productSubCategory = subCategory;
+        
+        // Only add subCategory filter if it exists and isn't "All"
+        if (subCategory && subCategory !== "All") {
+            query.productSubCategory = subCategory;
+        }
 
         // Sorting
         let sortOptions = { createdAt: -1 };
