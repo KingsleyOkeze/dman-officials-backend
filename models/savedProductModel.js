@@ -11,8 +11,11 @@ const savedProductSchema = new mongoose.Schema({
         ref: 'products', // Reference the products collection
         required: true 
     },
-  
-       
+    isDeleted: { 
+        type: Boolean, 
+        default: false 
+    },
+      
 }, { timestamps: true });
 
 const savedProductModel = mongoose.model('saved-products', savedProductSchema);

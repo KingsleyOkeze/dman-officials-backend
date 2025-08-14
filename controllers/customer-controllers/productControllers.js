@@ -2,179 +2,297 @@
 const productModel = require("../../models/productModel");
 
 const fetchFlashSaleProductFunction = async (req, res) => {
-    const { page = 0, limit = 6 } = req.query; // Extract page and limit from req.query, with defaults
+    // Destructure and set default values for query parameters
+    const { 
+        page = 0, 
+        limit = 6, 
+        sortBy = 'latest', 
+        searchInput, 
+        subCategory 
+    } = req.query;
 
     try {
-        // Get the current date and time
+        // Get current date to check for active flash sales
         const currentDate = new Date();
+        
+        // Determine sort order based on sortBy parameter
+        const sortOrder = sortBy === 'oldest' ? { createdAt: 1 } : { createdAt: -1 };
 
-        // Fetch products with `addedTimer` set to true and check if `timerExpiryDate` has not expired
-        const flashSaleProducts = await productModel.find({
+        // Base query for flash sale products:
+        // - Must have timer enabled
+        // - Timer must not be expired
+        // - Not deleted
+        const query = {
             addedTimer: true,
-            timerExpiryDate: { $gt: currentDate } // Only products with expiry dates in the future
-        })
-        .sort({ createdAt: -1 }) // Sort by creation date (newest first)
-        .skip(page * limit)
-        .limit(limit); // Limit to the limit value
+            timerExpiryDate: { $gt: currentDate },
+            isDeleted: false
+        };
 
-        console.log("stuff on sale", flashSaleProducts);
-
-        // Check if any products were found
-        if (flashSaleProducts.length === 0) {
-            return res.status(200).json({
-                success: true,
-                message: 'No active flash sale products available right now.',
-                flashSaleProducts: []
-            });
+        // Add subCategory filter if not "All"
+        if (subCategory && subCategory !== "All") {
+            query.productSubCategory = subCategory;
         }
 
+        // Add text search to query if searchInput provided
+        if (searchInput) {
+            query.$text = { 
+                $search: searchInput,
+                $caseSensitive: false,
+                $diacriticSensitive: false 
+            };
+        }
+
+        // Fetch products with applied filters, sorting, and pagination
+        const products = await productModel.find(query)
+            .sort(sortOrder)
+            .skip(page * limit)
+            .limit(limit);
+
+        // Return success response with products
         return res.status(200).json({
             success: true,
-            message: 'Flash sale products fetched successfully.',
-            result: flashSaleProducts
+            result: products,
+            message: products.length 
+                ? 'Flash sale products found' 
+                : 'No active flash sales currently available'
         });
+
     } catch (error) {
-        console.error('Error fetching flash sale products:', error);
-        return res.status(500).json({
-            success: false,
-            error: 'Failed to fetch flash sale products.',
-        });
+        console.error('Error fetching flash sales:', error);
+        return res.status(500).json({ error: "Internal Server Error!" });
     }
 };
-
-
-
 
 
 const fetchExploreProductsFunction = async (req, res) => {
-    const { page = 0, limit = 6 } = req.query; // Extract page and limit from req.query, with defaults
+    // Destructure and set default values for query parameters
+    const { 
+        page = 0, 
+        limit = 3, 
+        sortBy = 'latest', 
+        searchInput, 
+        subCategory 
+    } = req.query;
 
     try {
-        // Fetch 3 random products from each category
-        const menWearProducts = await productModel
-            .aggregate([
-                { $match: { productCategory: 'MenWear' } }, // Filter category
-                { $sample: { size: 3 } } // Randomly select 3 documents
-            ]);
-
-        const footwearProducts = await productModel
-            .aggregate([
-                { $match: { productCategory: 'FootWear' } },
-                { $sample: { size: 3 } }
-            ]);
+        // Determine sort order based on sortBy parameter
+        const sortOrder = sortBy === 'oldest' ? { createdAt: 1 } : { createdAt: -1 };
         
-        // Combine all results into a single array
-        const exploreProducts = [
-            ...menWearProducts,
-            ...footwearProducts
-        ];
+        // Base query for all products (not deleted)
+        const query = { isDeleted: false };
 
+        // Add text search to query if searchInput provided
+        if (searchInput) {
+            query.$text = { 
+                $search: searchInput,
+                $caseSensitive: false,
+                $diacriticSensitive: false 
+            };
+        }
+
+        // Build separate queries for each category with subCategory filter
+        const mensWearQuery = { ...query, productCategory: 'MensWear' };
+        if (subCategory && subCategory !== "All") {
+            mensWearQuery.productSubCategory = subCategory;
+        }
+
+        const footWearQuery = { ...query, productCategory: 'FootWear' };
+        if (subCategory && subCategory !== "All") {
+            footWearQuery.productSubCategory = subCategory;
+        }
+
+        // Fetch products
+        const mensWear = await productModel.find(mensWearQuery)
+            .sort(sortOrder)
+            .skip(page * limit)
+            .limit(limit);
+
+        const footWear = await productModel.find(footWearQuery)
+            .sort(sortOrder)
+            .skip(page * limit)
+            .limit(limit);
+
+        // Combine results from both categories
+        const exploreProducts = [...mensWear, ...footWear];
+
+        // Return success response with combined products
         return res.status(200).json({
-            success: true,
-            message: 'Explore products fetched successfully.',
             result: exploreProducts,
+            message: 'Explore products retrieved successfully'
         });
+
     } catch (error) {
         console.error('Error fetching explore products:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch explore products.',
-        });
+        return res.status(500).json({ error: "Internal Server Error!" });
     }
 };
-
-
 
 
 
 const fetchTrendingNowProductFunction = async (req, res) => {
-    const { page = 0, limit = 6 } = req.query; // Extract page and limit from req.query, with defaults
+    // Destructure and set default values for query parameters
+    const { 
+        page = 0, 
+        limit = 6, 
+        sortBy = 'latest', 
+        searchInput, 
+        subCategory 
+    } = req.query;
 
     try {
+        // Determine sort order based on sortBy parameter
+        const sortOrder = sortBy === 'oldest' ? { createdAt: 1 } : { createdAt: -1 };
         
-        const mensWearLatestProducts = await productModel
-            .find({ productCategory: 'MensWear' })
-            .sort({ createdAt: -1 })
+        // Base query for all products (not deleted)
+        const query = { isDeleted: false };
+
+        // Add text search to query if searchInput provided
+        if (searchInput) {
+            query.$text = { $search: searchInput };
+        }
+
+        // Fetch MensWear products with subCategory filter if not "All"
+        const mensWearQuery = { ...query, productCategory: 'MensWear' };
+        if (subCategory && subCategory !== "All") {
+            mensWearQuery.productSubCategory = subCategory;
+        }
+        
+        const mensWear = await productModel.find(mensWearQuery)
+            .sort(sortOrder)
             .skip(page * limit)
-            .limit(limit); 
+            .limit(limit);
 
-        const footwearLatestProducts = await productModel
-            .find({ productCategory: 'FootWear' })
-            .sort({ createdAt: -1 })
+        // Fetch FootWear products with same subCategory filter
+        const footWearQuery = { ...query, productCategory: 'FootWear' };
+        if (subCategory && subCategory !== "All") {
+            footWearQuery.productSubCategory = subCategory;
+        }
+        
+        const footWear = await productModel.find(footWearQuery)
+            .sort(sortOrder)
             .skip(page * limit)
-            .limit(limit); 
+            .limit(limit);
 
-        let combinedProductCategories = [
-            ...mensWearLatestProducts, 
-            ...footwearLatestProducts
-        ];    
+        // Combine results from both categories
+        const trendingProducts = [...mensWear, ...footWear];
 
-        // console.log("trending now products", combinedProductCategories)
+        // Return success response with combined products
         return res.status(200).json({
-            result: combinedProductCategories, 
-            message: "Successfully fetched trending now products!"
+            result: trendingProducts,
+            message: 'Trending products retrieved successfully'
         });
 
     } catch (error) {
-        console.log("Server Error fetching orders", error)
-        return res.status(500).json({ error: "Internal Server Error!"})
+        console.error('Error fetching trending products:', error);
+        return res.status(500).json({ error: "Internal Server Error!" });
     }
-}
+};
 
+const fetchRecommendedProductFunction = async (req, res) => {
+    const { productId } = req.params;
+    console.log("recommended of ", productId)
+    try {
+        const currentProduct = await productModel.findById(productId);
+
+        if (!currentProduct) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        // Build a query for similar products
+        const recommendedProducts = await productModel.find({
+            $or: [
+                // Priority 1: Same sub-category
+                { productSubCategory: currentProduct.productSubCategory, _id: { $ne: currentProduct._id } },
+                // Priority 2: Same category
+                { productCategory: currentProduct.productCategory, _id: { $ne: currentProduct._id } },
+                // Priority 3: Same brand
+                { productBrand: currentProduct.productBrand, _id: { $ne: currentProduct._id } }
+            ]
+        }).limit(8) // Limit to a reasonable number of recommendations
+        .select('productImageUrl productName productDescription productBrand productCategory productColor productPrice')
+
+        // Fallback to random if no similar products are found
+        if (recommendedProducts.length === 0) {
+            const randomProducts = await productModel.aggregate([
+                { $sample: { size: 8 } },
+                { $project: { productImageUrl: 1, productName: 1, productDescription: 1, productColor: 1, productPrice: 1 } }
+            ]);
+            return res.status(200).json({ products: randomProducts });
+        }
+
+        return res.status(200).json({ products: recommendedProducts });
+    } catch (error) {
+        console.error("Errror fetching recommended product", error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
 
 
 const searchProductFunction = async (req, res) => {
-    // Extract the search input from query
-    const { searchInput, limit, page, sortBy } = req.query;
+    const { 
+        searchInput, 
+        limit, 
+        page, 
+        sortBy, 
+        subCategory 
+    } = req.query;
 
     try {
-    
-        // Default values for pagination
-        const itemsPerPage = parseInt(limit) || 12; // Default to 12 items per page
+        // Pagination setup (unchanged from your original)
+        const itemsPerPage = parseInt(limit) || 12;
         const currentPage = parseInt(page) || 0;
-        const skip = (currentPage) * itemsPerPage;
+        const skip = currentPage * itemsPerPage;
 
-        let sortOptions = {};  // Set default sorting options
-        
+        let filterQuery = { isDeleted: false };
+        let sortOptions = { createdAt: -1 }; // default newest first
+
+        // Add subCategory filter if not "All"
+        if (subCategory && subCategory !== "All") {
+            filterQuery.productSubCategory = subCategory;
+        }
+
+        // Sorting logic (unchanged)
         if (sortBy === 'latest') {
-            sortOptions = { createdAt: -1 };  // Sort by latest (descending)
+            sortOptions = { createdAt: -1 };
         } else if (sortBy === 'oldest') {
-            sortOptions = { createdAt: 1 };  // Sort by oldest (ascending)
+            sortOptions = { createdAt: 1 };
         }
     
-        // Build the search filter
-        const filters = {};
+        // Improved search using MongoDB text index
         if (searchInput) {
-            filters.$or = [
-              { productName: { $regex: searchInput, $options: "i" } }, // Case-insensitive match on product name
-              { productCategory: { $regex: searchInput, $options: "i" } }, // Case-insensitive match on category
-              { productSubCategory: { $regex: searchInput, $options: "i" } }  // Case-insensitive match on subcategory
-            ];
-        } 
+            filterQuery.$text = { 
+                $search: searchInput,
+                $caseSensitive: false,
+                $diacriticSensitive: false 
+            };
+            // Sort by relevance score if no sort specified
+            if (!sortBy) {
+                sortOptions = { score: { $meta: "textScore" } };
+            }
+        }
     
-        // Query the database
-        const products = await productModel.find(filters)
-          .sort(sortOptions)
-          .skip(skip)
-          .limit(itemsPerPage);
+        // Query execution (same as original but more efficient)
+        const products = await productModel.find(filterQuery)
+            .sort(sortOptions)
+            .skip(skip)
+            .limit(itemsPerPage);
     
-        // Count total products for pagination
-        const totalProducts = await productModel.countDocuments(filters);
-    
-        console.log('search result is', products);
-        // Send the results to the client
+        // Count total (unchanged)
+        const totalProducts = await productModel.countDocuments(filterQuery);
+
+        // Response format (unchanged)
         return res.status(200).json({
-          success: true,
-          result: products,
-          totalProducts,
-          totalPages: Math.ceil(totalProducts / itemsPerPage),
-          currentPage,
+            success: true,
+            result: products,
+            totalProducts,
+            totalPages: Math.ceil(totalProducts / itemsPerPage),
+            currentPage,
         });
-      } catch (error) {
+    } catch (error) {
         console.error("Error searching products:", error);
         return res.status(500).json({ success: false, message: "Internal Server Error" });
     }
-}
+};
 
 
 const fetchProductsByCategoryFunction = async (req, res) => {
@@ -185,92 +303,74 @@ const fetchProductsByCategoryFunction = async (req, res) => {
         page = 0,
         limit = 12,
         searchInput
-    } = req.query;  // Destructure the query parameters
-    console.log('category function called', category,  subCategory, sortBy, page, limit)
+    } = req.query;
+
+    console.log('fetch by category called', category, 
+        subCategory, 
+        sortBy,
+        page,
+        limit,
+        searchInput);
+        
     try {
-        // Let check if category is other category not defined in the
-        // enum of productCategory in our productModel e.g "TrendingNow"
-        // "NewArrival", "Explore" "FlashSale" "search" etc...
+        // Handle special categories
         if (category === "TrendingNow") {
-             // Pass page and limit directly to fetchTrendingNowProductFunction
-             req.query.page = page; // Ensure the page value is in req.query
-             req.query.limit = limit; // Ensure the limit value is in req.query
- 
-             // Call the function with req and res
-             return await fetchTrendingNowProductFunction(req, res);
-        }
-
-        if (category === "Explore") {
-            req.query.page = page; 
+            req.query.page = page;
             req.query.limit = limit;
-
+            return await fetchTrendingNowProductFunction(req, res);
+        }
+        if (category === "Explore") {
+            req.query.page = page;
+            req.query.limit = limit;
             return await fetchExploreProductsFunction(req, res);
         }
-
         if (category === "Sale") {
-            req.query.page = page; 
+            req.query.page = page;
             req.query.limit = limit;
-
             return await fetchFlashSaleProductFunction(req, res);
         }
-
         if (category === "search") {
-            req.query.page = page; 
+            req.query.page = page;
             req.query.limit = limit;
             req.query.sortBy = sortBy;
             req.query.searchInput = searchInput;
-
-            // Call the function with req and res
             return await searchProductFunction(req, res);
-       }
-
-        const query = {};  // Initialize the query filter
-        
-        // If a category is selected, add it to the filter
-        if (category) {
-            query.productCategory = category;
         }
 
-        // Add subCategory filter if it exists
-        if (subCategory) {
+        // Default filter 
+        const query = { isDeleted: false };
+        if (category) query.productCategory = category;
+        
+        // Only add subCategory filter if it exists and isn't "All"
+        if (subCategory && subCategory !== "All") {
             query.productSubCategory = subCategory;
         }
 
+        // Sorting
+        let sortOptions = { createdAt: -1 };
+        if (sortBy === 'latest') sortOptions = { createdAt: -1 };
+        if (sortBy === 'oldest') sortOptions = { createdAt: 1 };
 
-        let sortOptions = {};  // Set default sorting options
-        
-        if (sortBy === 'latest') {
-            sortOptions = { createdAt: -1 };  // Sort by latest (descending)
-        } else if (sortBy === 'oldest') {
-            sortOptions = { createdAt: 1 };  // Sort by oldest (ascending)
-        }
+        // Added .lean() for better performance
+        const products = await productModel.find(query)
+            .sort(sortOptions)
+            .skip(parseInt(page) * parseInt(limit))
+            .limit(parseInt(limit))
+            .lean();
 
-
-        // Fetch the products from MongoDB with the applied filters and sorting
-        const products = await productModel.find(query).sort(sortOptions);
-
-        // Get the exact document count
-        const totalProductsCountInDb = await productModel.countDocuments(); 
-        console.log("total document in db", totalProductsCountInDb);
-        const numberOfProductsToReturn = limit;
-
-        // Calculate the total number of pages
-        const totalPages = Math.ceil(totalProductsCountInDb / numberOfProductsToReturn); 
-        console.log("total pages for this product category", totalPages);
+        const totalProductsCountInDb = await productModel.countDocuments(query);
 
         return res.status(200).json({
-            result: products, 
-            totalPages,
-            message: "Successfully fetched Orders!"
+            result: products,
+            totalPages: Math.ceil(totalProductsCountInDb / parseInt(limit)),
+            message: "Successfully fetched products!"
         });
 
     } catch (error) {
-        console.log("Server Error fetching orders", error)
-        return res.status(500).json({ error: "Internal Server Error!"})
+        console.log("Server Error fetching products", error);
+        return res.status(500).json({ error: "Internal Server Error!" });
     }
-
 };
-
 
 
 
@@ -307,6 +407,7 @@ module.exports = {
     fetchFlashSaleProductFunction,
     fetchExploreProductsFunction,
     fetchTrendingNowProductFunction,
+    fetchRecommendedProductFunction,
     fetchProductDetailsFunction,
     searchProductFunction
 };

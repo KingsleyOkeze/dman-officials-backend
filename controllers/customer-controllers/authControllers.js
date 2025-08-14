@@ -268,7 +268,7 @@ const loginFunction = async (req, res) => {
 			}
 
 			const verificationLink = `${process.env.CUSTOMER_CLIENT_URL}/sign-up-email-verification/${verificationToken}`;
-			
+
 			// Compile and send account sign up email
 		    const signUpEmailData = {
 			    logoUrl: `${process.env.CUSTOMER_CLIENT_URL}/dman-logo.png`, 
@@ -290,13 +290,6 @@ const loginFunction = async (req, res) => {
 		
 		
 		}
-
-		// Log login activity directly inside after user successfully login.
-        await activityLogsModel.create({
-            customerRef: user._id,
-			ipAddress: ip,
-            activityType: "Login",
-        });
 
 		// Sign JWT tokens
 		const accessToken = jwt.sign(
@@ -320,8 +313,12 @@ const loginFunction = async (req, res) => {
 		  console.log('successfully logged in.')
 		  // Send tokens via cookies
 		  // Set cookies with HttpOnly flag
+
+		  // Role-specific cookie name: refreshToken_customer 
+    	  const cookieName = `refreshToken_${user.role.toLowerCase()}`;
+
 		  return res
-				   .cookie('refreshToken', refreshToken, {
+				   .cookie(cookieName, refreshToken, {
 					    httpOnly: true,
 					    secure: process.env.NODE_ENV === 'production' ? true : false, // true in prod, fasle in dev
 					    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 day
@@ -417,72 +414,93 @@ const resetPasswordFunction = async (req, res) => {
 };
 
 
-const refereshTokenFunction = async (req, res) => {
-	const refreshToken = req.cookies.refreshToken; // Refresh token from HTTP-only cookie
-  
-	// Log cookies for debugging
-    console.log("Cookies:", req.cookies);
-	console.log("Refresh Token:", refreshToken);
+const refreshTokenFunction = async (req, res) => {
+    try {
+        // Find the role-specific cookie name (e.g., refreshToken_admin, refreshToken_customer)
+        const cookieName = Object.keys(req.cookies).find(key => key.startsWith('refreshToken_'));
+        
+        if (!cookieName) {
+            return res.status(401).json({ error: 'No refresh token provided' });
+        }
 
-	if (!refreshToken) {
-		console.log("Refresh Token not present:", refreshToken);
-	    return res.status(401).json({ error: 'No refresh token provided' });
-	}
-  
-	const decoded = jwt.verify(refreshToken, refreshTokenSecret);
+        // Get the refresh token from the cookie
+        const refreshToken = req.cookies[cookieName];
+        if (!refreshToken) {
+            return res.status(401).json({ error: 'No refresh token provided' });
+        }
 
-	if (!decoded) {
-		console.log("Refresh Token invalid:", decoded);
-		return res.status(401).json({ error: 'Invalid or expired refresh token' });
+        // Verify token signature
+        const decoded = jwt.verify(refreshToken, refreshTokenSecret);
+
+        // Issue new access token
+        const newAccessToken = jwt.sign(
+            { userId: decoded.userId, role: decoded.role },
+            accessTokenSecret,
+            { expiresIn: '15m' }
+        );
+
+        // Rotate refresh token (optional)
+        const newRefreshToken = jwt.sign(
+            { userId: decoded.userId, role: decoded.role },
+            refreshTokenSecret,
+            { expiresIn: '7d' }
+        );
+
+        // Set new refresh token in cookie with the same cookie name
+        res.cookie(cookieName, newRefreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production' ? true : false, // true in prod, false in dev
+            sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // 'None' in prod, 'Lax' in dev
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+
+        // Return new access token
+        return res.status(200).json({ accessToken: newAccessToken });
+
+    } catch (error) {
+        console.error('Refresh token error:', error.name, error.message);
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ error: 'Refresh token has expired' });
+        }
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ error: 'Invalid refresh token' });
+        }
+        return res.status(500).json({ error: 'Internal server error' });
     }
-
-	// Issue a new access token
-	const newAccessToken = jwt.sign(
-		{ 
-			userId: decoded.userId, 
-			role: decoded.role 
-		}, 
-		accessTokenSecret, 
-		{ expiresIn: '15m' }
-	);
-	return res.status(200).json({ accessToken: newAccessToken });
-
 };
+
 
 
 // Logout Function
 const logoutFunction = async (req, res) => {
-	const { customerId, activity, sessionDuration, ip } = req.body;
-	console.log('logout extra details', customerId, activity, sessionDuration, ip);
-        
-	try {
-        // Clear the refreshToken cookie
-        res.clearCookie("refreshToken", {
-			httpOnly: true,
-			secure: process.env.NODE_ENV === 'production' ? true : false, // true in prod, fasle in dev
-			sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // 'None' in prod, 'Lax' in dev
-		});
+    try {
+        // Find all cookies starting with 'refreshToken_'
+        const refreshTokenCookies = Object.keys(req.cookies).filter(key => key.startsWith('refreshToken_'));
 
-		// Save logout customer activity
-        await activityLogsModel.create({
-            customerRef: customerId,
-            activityType: activity || "Logout", // Default to "logout"
-            sessionDuration: sessionDuration || 0, // Ensure session duration is set
-            ipAddress: ip || "Unknown", // Handle missing IP gracefully
+        if (refreshTokenCookies.length === 0) {
+            console.log("No refresh token cookies found for logout.");
+            return res.status(200).json({ message: "Logged out successfully (no refresh token found)" });
+        }
+
+        // Clear all refresh token cookies
+        refreshTokenCookies.forEach(cookieName => {
+            res.clearCookie(cookieName, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production' ? true : false, // true in prod, false in dev
+                sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // 'None' in prod, 'Lax' in dev
+            });
         });
 
-		console.log(`User ${customerId} logged out after ${sessionDuration} sec time.`);
-        // console.log(`User ${customerId} logged out successfully.`);
+        console.log("User logged out successfully, cleared cookies:", refreshTokenCookies);
         return res.status(200).json({
             message: "Logged out successfully",
         });
     } catch (error) {
-        console.error("Error during logout:", error);
+        console.error("Error during logout:", error.name, error.message);
         return res.status(500).json({
             error: "Internal Server Error",
         });
     }
-
 };
 
 
@@ -494,6 +512,6 @@ module.exports = {
 	resendSignUpVerificationEmailFunction,
 	forgotPasswordFunction,
 	resetPasswordFunction,
-	refereshTokenFunction,
+	refreshTokenFunction,
 	logoutFunction
 }

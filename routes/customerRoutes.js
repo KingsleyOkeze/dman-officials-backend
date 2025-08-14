@@ -7,7 +7,7 @@ const {
     verifySignUpEmailFunction,
     forgotPasswordFunction,
     resetPasswordFunction,
-    refereshTokenFunction,
+    refreshTokenFunction,
     logoutFunction
 } = require("../controllers/customer-controllers/authControllers");
 const { 
@@ -16,7 +16,8 @@ const {
     fetchFlashSaleProductFunction,
     fetchExploreProductsFunction,
     fetchTrendingNowProductFunction,
-    searchProductFunction, 
+    searchProductFunction,
+    fetchRecommendedProductFunction, 
 } = require("../controllers/customer-controllers/productControllers");
 const { 
     addToCartFunction, 
@@ -52,7 +53,7 @@ router.post("/verify-sign-up-email/:token", verifySignUpEmailFunction);
 router.post("/resend-sign-up-email-verification/:userId", resendSignUpVerificationEmailFunction);
 router.post("/forget-password", forgotPasswordFunction);
 router.post("/reset-password", resetPasswordFunction);
-router.post("/refresh-token", refereshTokenFunction);
+router.post("/refresh-token", refreshTokenFunction);
 router.post("/logout", logoutFunction);
 
 // ACTIVITY ROUTER
@@ -65,7 +66,7 @@ router.get("/flash-sale-products", fetchFlashSaleProductFunction);
 router.get("/fetch-explore-products", fetchExploreProductsFunction);
 router.get("/fetch-product-details/:productId", fetchProductDetailsFunction);
 router.get("/fetch-trending-now-products", fetchTrendingNowProductFunction);
-
+router.get("/recommended-product/:productId", fetchRecommendedProductFunction);
 router.get("/search-product", searchProductFunction);
 
 // ACCOUNT ROUTES

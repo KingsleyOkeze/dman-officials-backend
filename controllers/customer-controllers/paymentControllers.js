@@ -58,6 +58,7 @@ const verifyTransactionFunction = async (req, res) => {
                 order.paymentStatus = "PaymentMismatch";
                 order.amountCustomerPaid = parseInt(amountCharged);
                 order.paymentReference = reference;
+                order.paymentMethod = parsedData.data.channel || "Unknown";
                 await order.save();
 
                 // Compile and send payment mismatch email

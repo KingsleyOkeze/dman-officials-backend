@@ -6,7 +6,7 @@ const {
     verifySignUpEmailFunction,
     forgotPasswordFunction,
     resetPasswordFunction,
-    refereshTokenFunction,
+    refreshTokenFunction,
     logoutFunction
 } = require("../controllers/admin-controllers/authControllers");
 const { 
@@ -57,7 +57,7 @@ router.post("/verify-sign-up-email/:token", verifySignUpEmailFunction);
 router.post("/resend-sign-up-email-verification/:userId", resendSignUpVerificationEmailFunction);
 router.post("/forget-password", forgotPasswordFunction);
 router.post("/reset-password", resetPasswordFunction);
-router.post("/refresh-token", refereshTokenFunction);
+router.post("/refresh-token", refreshTokenFunction);
 router.post("/logout", logoutFunction);
 
 // Protected routes (authentication required)

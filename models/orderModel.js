@@ -70,6 +70,7 @@ const orderSchema = new mongoose.Schema({
             'Shipped',
             'Delivered',
             'Cancelled',
+            'Deleted'
         ],
         default: 'Pending'
     },
@@ -96,7 +97,11 @@ const orderSchema = new mongoose.Schema({
     discountAmountApplied: { // field for discount amount from coupon
         type: Number,
         default: 0 // Default to 0 if no discount is applied
-    }
+    },
+    isDeleted: { 
+        type: Boolean, 
+        default: false 
+    },
 
 }, { timestamps: true });
 

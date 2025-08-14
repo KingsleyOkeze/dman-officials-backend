@@ -11,7 +11,7 @@ const fetchOrdersFunction = async (req, res) => {
     console.log('fetch query is', orderStatus );
     try {
         if (orderStatus && orderStatus !== "AllOrders") {
-            query = { orderStatus: orderStatus }
+            query = { orderStatus: orderStatus, isDeleted: false }
         } 
         
         // Get the portions of the pagination requested
@@ -39,7 +39,12 @@ const fetchOrdersFunction = async (req, res) => {
         const totalPages = Math.ceil(totalOrderCountInDb / numberOfItemsToReturn); 
         console.log("total pages", totalPages);
 
-        return res.status(200).json({result: allOrders, totalPages, message: "Successfully fetched Orders!"});
+        return res.status(200).json({
+            result: allOrders, 
+            currentPage: page,
+            totalPages, 
+            message: "Successfully fetched Orders!"
+        });
 
     } catch (error) {
         console.log("Server Error fetching orders", error)
@@ -121,23 +126,27 @@ const updateOrderStatusFunction = async (req, res) => {
 
 
 const deleteOrderFunction = async (req, res) => {
-    const { orderId } = req.params; // Extract orderId from route parameters
+    const { orderId } = req.params;
 
     try {
-        // Validate that an order ID was provided
+        // Validate input
         if (!orderId) {
             return res.status(400).json({ error: "Order ID is required!" });
         }
 
-        // Find the order by ID and delete it
-        const deletedOrder = await orderModel.findByIdAndDelete(orderId);
+        // Soft delete: mark as deleted instead of removing permanently
+        const deletedOrder = await orderModel.findByIdAndUpdate(
+            orderId,
+            { isDeleted: true, orderStatus: 'Deleted' },
+            { new: true }
+        );
 
-        // Check if the order was found and deleted
+        // If not found
         if (!deletedOrder) {
-            return res.status(404).json({ error: "Order not found or already deleted!" });
+            return res.status(404).json({ error: "Order not found!" });
         }
 
-        console.log("Order deleted successfully!");
+        console.log("Order soft-deleted successfully!");
         return res.status(200).json({
             message: "Order deleted successfully!",
             deletedOrder,
@@ -147,9 +156,6 @@ const deleteOrderFunction = async (req, res) => {
         return res.status(500).json({ error: "Internal Server Error!" });
     }
 };
-
-
-
 
 
 

@@ -10,20 +10,27 @@ const fetchCustomersFunction = async (req, res) => {
     const numberOfCustomersToReturn = req.query.limit || 7;
     const sortBy = req.query.sortBy; 
 
+    let filterQuery = {};
     let sortQuery = {};
     
     try {
         if (sortBy === "Oldest") {
-            sortQuery = { createdAt: 1 }; // Sort by oldest first
+            filterQuery = { isDeleted: false };
+            sortQuery = { createdAt: 1 }; // oldest first
         } else if (sortBy === "Newest") {
-            sortQuery = { createdAt: -1 }; // Sort by newest first
+            filterQuery = { isDeleted: false };
+            sortQuery = { createdAt: -1 }; // newest first
+        } else if (sortBy === "Deleted") {
+            filterQuery = { isDeleted: true };
+            sortQuery = { createdAt: -1 };
         } else {
-            sortQuery = { createdAt: -1 }; // Default sorting (newest first)
+            filterQuery = {}; // no filter
+            sortQuery = { createdAt: -1 }; // default newest first
         }
 
 
         // Get the portions of the pagination requested
-        const allCustomers = await customerModel.find() 
+        const allCustomers = await customerModel.find(filterQuery) 
             .sort(sortQuery)
             .skip(page * numberOfCustomersToReturn)
             .limit(numberOfCustomersToReturn)
@@ -34,7 +41,7 @@ const fetchCustomersFunction = async (req, res) => {
         }
 
         // Get the exact document count
-        const totalCustomersCountInDb = await customerModel.countDocuments(); 
+        const totalCustomersCountInDb = await customerModel.countDocuments(filterQuery); 
         console.log("total document in db", totalCustomersCountInDb);
 
         // Calculate the total number of pages
@@ -50,38 +57,35 @@ const fetchCustomersFunction = async (req, res) => {
 }
 
 
-
-
 const deleteCustomerAccountFunction = async (req, res) => {
     const { customerId } = req.params;
 
     try {
-        // Check if customerId is provided
         if (!customerId) {
             return res.status(400).json({ error: "Customer ID is required!" });
         }
 
-        // Find the customer to ensure they exist
         const customer = await customerModel.findById(customerId);
-        if (!customer) {
+        if (!customer || customer.isDeleted) {
             return res.status(404).json({ error: "Customer not found!" });
         }
 
-        // Delete associated data
-        await orderModel.deleteMany({ customerRef: customerId });
-        await cartModel.deleteMany({ customerRef: customerId });
-        await savedProductModel.deleteMany({ customerRef: customerId });
+        // Soft delete the customer
+        customer.isDeleted = true;
+        await customer.save();
 
-        // Delete the customer record
-        await customerModel.findByIdAndDelete(customerId);
+        // Soft-delete associated records 
+        await orderModel.updateMany({ customerRef: customerId }, { isDeleted: true });
+        await cartModel.updateMany({ customerRef: customerId }, { isDeleted: true });
+        await savedProductModel.updateMany({ customerRef: customerId }, { isDeleted: true });
 
-        // Success response
-        return res.status(200).json({ message: "Customer account and all associated data deleted successfully!" });
+        return res.status(200).json({ message: "Customer account soft-deleted successfully!" });
     } catch (error) {
-        console.error("Error deleting customer account:", error);
+        console.error("Error soft-deleting customer account:", error);
         return res.status(500).json({ error: "Internal Server Error!" });
     }
 };
+
 
 
 
