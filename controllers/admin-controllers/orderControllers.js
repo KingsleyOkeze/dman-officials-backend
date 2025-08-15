@@ -86,40 +86,53 @@ const fetchOrderDetailsFunction = async (req, res) => {
 
 const updateOrderStatusFunction = async (req, res) => {
     const { orderId, orderCurrentStatus } = req.body;
-    console.log("order update info receive", orderId, orderCurrentStatus)
+    console.log("Order update info received:", orderId, orderCurrentStatus);
+
     try {
-        if (!orderId) {
-            return res.status(400).json({ error: "Couldn't identify order"})
-        }
-        if (!orderCurrentStatus) {
-            return res.status(400).json({ error: "Couldn't identify order status"})
+        if (!orderId || !orderCurrentStatus) {
+            return res.status(400).json({ error: "Missing required order information."});
         }
 
-        const updatedOrderStatus = await orderModel.findByIdAndUpdate(
-            orderId,
-            { 
-                orderStatus: orderCurrentStatus, // Update the order status
-            },
-            { new: true, runValidators: true } // Options: return the updated document and run validators
-        );
+        const order = await orderModel.findById(orderId);
 
-        if (!updatedOrderStatus) {
+        if (!order) {
             console.log('Order not found');
             return res.status(404).json({ error: "Order not found!"});
         }
+        
+        // Check if the new status is the same as the current one to avoid unnecessary writes
+        if (order.orderStatus === orderCurrentStatus) {
+            return res.status(200).json({ 
+                message: "Order status is already up to date.",
+                orderStatus: order.orderStatus,
+                updatedOrder: order
+            });
+        }
 
-        console.log('Updated Order status:', updatedOrderStatus.orderStatus);
+        // Add a new entry to the status history with the current timestamp
+        order.statusHistory.push({
+            status: orderCurrentStatus,
+            timestamp: new Date()
+        });
+
+        // Update the main order status field
+        order.orderStatus = orderCurrentStatus;
+        
+        // Save the updated document
+        const updatedOrder = await order.save();
+        
+        console.log('Successfully updated order status:', updatedOrder.orderStatus);
 
         return res.status(200).json({ 
             message: "Successfully updated order status!",
-            orderStatus: updatedOrderStatus.orderStatus
-        })
+            orderStatus: updatedOrder.orderStatus,
+            updatedOrder: updatedOrder // Return the full updated document
+        });
 
     } catch (error) {
-        console.log('err updating order status:', error);
+        console.error('Error updating order status:', error);
         return res.status(500).json({ error: "Internal Server Error!"});
     }
-
 };
 
 

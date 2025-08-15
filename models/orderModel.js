@@ -74,7 +74,17 @@ const orderSchema = new mongoose.Schema({
         ],
         default: 'Pending'
     },
-
+    statusHistory: [{
+        status: {
+            type: String,
+            enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Deleted'],
+            required: true
+        },
+        timestamp: {
+            type: Date,
+            default: Date.now
+        }
+    }],
     orderedItems: [{
         productRef: { 
             type: mongoose.Schema.Types.ObjectId, 
