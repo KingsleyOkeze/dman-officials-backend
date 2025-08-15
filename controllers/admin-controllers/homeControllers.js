@@ -3,36 +3,40 @@ const productModel = require("../../models/productModel");
 
 
 const searchProductFunction = async (req, res) => {
-    // Extract the search input from query
-    const { searchInput, limit, page,  } = req.query;
+    // 1. Extract query parameters from request
+    const { searchInput, limit, page } = req.query;
   
     try {
-        // Default values for pagination
-        const itemsPerPage = parseInt(limit) || 12; // Default to 12 items per page
-        const currentPage = parseInt(page) || 0;
-        const skip = (currentPage) * itemsPerPage;
+        // Set up pagination with defaults
+        const itemsPerPage = parseInt(limit) || 12;
+        const currentPage = parseInt(page) || 0;     
+        const skip = currentPage * itemsPerPage;    
     
-        // Build the search filter
-        const filters = {};
+        // Build the base filter - always exclude deleted items
+        const filters = { isDeleted: false }; 
+        
+        // 4. Add text search capability if search input exists
         if (searchInput) {
-            filters.$or = [
-              { productName: { $regex: searchInput, $options: "i" } }, // Case-insensitive match on product name
-              { productCategory: { $regex: searchInput, $options: "i" } }, // Case-insensitive match on category
-              { productSubCategory: { $regex: searchInput, $options: "i" } }  // Case-insensitive match on subcategory
-            ];
+            filters.$text = { 
+                $search: searchInput,
+                $caseSensitive: false,   // Case-insensitive matching
+                $diacriticSensitive: false // Ignores accent marks
+            };
         } 
     
-        // Query the database
+        // Execute the database query with:
         const products = await productModel.find(filters)
-          .sort({createdAt: -1})
+          .sort({
+              ...(searchInput ? { score: { $meta: "textScore" } } : {}), // Boost text matches
+              createdAt: -1 // Secondary sort: newest first
+          })
           .skip(skip)
           .limit(itemsPerPage);
     
-        // Count total products for pagination
+        // Get total count for pagination calculation
         const totalProducts = await productModel.countDocuments(filters);
     
-        console.log('search result is', products);
-        // Send the results to the client
+        // Return standardized response with:
         return res.status(200).json({
           success: true,
           result: products,
@@ -40,9 +44,10 @@ const searchProductFunction = async (req, res) => {
           searchTotalPages: Math.ceil(totalProducts / itemsPerPage),
           currentPage,
         });
-      } catch (error) {
-        console.error("Error searching products:", error);
-        return res.status(500).json({ success: false, message: "Internal Server Error" });
+        
+    } catch (error) {
+        console.error("Search Error:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
     }
 };
 

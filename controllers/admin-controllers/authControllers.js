@@ -403,15 +403,10 @@ const resetPasswordFunction = async (req, res) => {
 
 const refreshTokenFunction = async (req, res) => {
     try {
-        // Find the role-specific cookie name (e.g., refreshToken_admin, refreshToken_customer)
-        const cookieName = Object.keys(req.cookies).find(key => key.startsWith('refreshToken_'));
-        
-        if (!cookieName) {
-            return res.status(401).json({ error: 'No refresh token provided' });
-        }
-
-        // Get the refresh token from the cookie
+        // Explicitly check for admin-specific refresh token cookie
+        const cookieName = 'refreshToken_admin';
         const refreshToken = req.cookies[cookieName];
+		
         if (!refreshToken) {
             return res.status(401).json({ error: 'No refresh token provided' });
         }

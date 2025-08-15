@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const savedProductModel = require("../../models/savedProductModel");
 const orderModel = require("../../models/orderModel");
 const productModel = require("../../models/productModel");
+const { convertDateToUTC } = require("../../utils/dateUtils");
 
 const fetchCustomerDetailsFunction = async (req, res) => {
     const { customerId } = req.query; 
@@ -339,7 +340,7 @@ const fetchAllCustomerOrdersFunction = async (req, res) => {
                 .join(", "),
             image: order.orderedItems[0]?.productRef?.productImageUrl?.[0] || null, // Fallback for missing images
             status: order.orderStatus || "Unknown", // Ensure status always has a value
-            deliveryDate: order.deliveryDate || "Not specified", // Add this field in your schema if required
+            lastUpdated: order.updatedAt || "Not specified", // Add this field in your schema if required
         }));
 
         // Log and send response
