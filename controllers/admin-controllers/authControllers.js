@@ -336,7 +336,7 @@ const forgotPasswordFunction = async (req, res) => {
 		// Check if the email exists in the system
 		const user = await adminModel.findOne({ email });
 		if (!user) {
-			return res.status(404).json({ message: 'User not found' });
+			return res.status(404).json({ error: 'User not found' });
 		}
 
 		// Generate JWT token with expiration

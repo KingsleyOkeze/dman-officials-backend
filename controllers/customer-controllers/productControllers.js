@@ -48,10 +48,14 @@ const fetchFlashSaleProductFunction = async (req, res) => {
             .skip(page * limit)
             .limit(limit);
 
+        // Count total (unchanged)
+        const totalProducts = await productModel.countDocuments(query);
+    
         // Return success response with products
         return res.status(200).json({
             success: true,
             result: products,
+            totalPages: Math.ceil(totalProducts / limit),
             message: products.length 
                 ? 'Flash sale products found' 
                 : 'No active flash sales currently available'
@@ -115,9 +119,12 @@ const fetchExploreProductsFunction = async (req, res) => {
         // Combine results from both categories
         const exploreProducts = [...mensWear, ...footWear];
 
+        const totalProducts = await productModel.countDocuments(query);
+
         // Return success response with combined products
         return res.status(200).json({
             result: exploreProducts,
+            totalPages: Math.ceil(totalProducts / limit),
             message: 'Explore products retrieved successfully'
         });
 
@@ -176,9 +183,12 @@ const fetchTrendingNowProductFunction = async (req, res) => {
         // Combine results from both categories
         const trendingProducts = [...mensWear, ...footWear];
 
+        const totalProducts = await productModel.countDocuments(query);
+
         // Return success response with combined products
         return res.status(200).json({
             result: trendingProducts,
+            totalPages: Math.ceil(totalProducts / limit),
             message: 'Trending products retrieved successfully'
         });
 
@@ -388,7 +398,7 @@ const fetchProductDetailsFunction = async (req, res) => {
         if (!product) {
             return res.status(404).json({ error: "Product not found!" });
         }
-// console.log('successfully fetch product details!', product)
+        // console.log('successfully fetch product details!', product)
         return res.status(200).json({
             message: 'Successfully fetched product details!',
             result: product
