@@ -102,14 +102,21 @@ const signupFunction = async (req, res) => {
 
 		const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
 
-		emailingFunction(email, 'Account Sign up - DMAN E-commerce', signUpEmailHtml);
-		
-		console.log("customer account successfully created!")
-		return res.status(201).json({ 
-			userId: createdUser._id,
-			message: "An email on how to complete sign up was sent to you"
-		});
+		// Await the email sending function
+		const emailResult = await emailingFunction(email, 'Account Sign up - DMAN E-commerce', signUpEmailHtml);
 
+        // Check the result of the email sending
+        if (emailResult.success) {
+            console.log("customer account successfully created!")
+			return res.status(201).json({ 
+				userId: createdUser._id,
+				message: "An email on how to complete sign up was sent to you"
+			});
+        } else {
+            // If email sending failed, send an error response
+            return res.status(500).json({ error: "Failed to send password reset email." });
+        }
+		
 	} catch (error) {
 		console.log('Sign up error', error);
 		return res.status(500).json({ error: 'Internal Server Error!' });
@@ -214,9 +221,16 @@ const resendSignUpVerificationEmailFunction = async (req, res) => {
 
 		const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
 
-		emailingFunction(email, 'Account Sign up - DMAN E-commerce', signUpEmailHtml);
+		// Await the email sending function
+		const emailResult = await emailingFunction(email, 'Account Sign up - DMAN E-commerce', signUpEmailHtml);
 
-		return res.status(200).json({ message: 'An email was sent to you' });
+        // Check the result of the email sending
+        if (emailResult.success) {
+			return res.status(200).json({ message: 'An email was sent to you' });
+        } else {
+            // If email sending failed, send an error response
+            return res.status(500).json({ error: "Failed to send password reset email." });
+        }
 
 	} catch (error) {
 		console.log('server error while verifying email', error);
@@ -366,11 +380,18 @@ const forgotPasswordFunction = async (req, res) => {
 	        resetLink: resetLink,
         };
 
-    const resetPasswordHtml = compileEmailTemplate('passwordReset', resetPasswordData);
+		const resetPasswordHtml = compileEmailTemplate('passwordReset', resetPasswordData);
 
-    emailingFunction(email, 'Reset Password - DMAN E-commerce', resetPasswordHtml);
+		// Await the email sending function
+		const emailResult = await emailingFunction(email, 'Reset Password - DMAN E-commerce', resetPasswordHtml);
 
-    return res.status(200).json({ message: 'Password reset link has been sent to your email.' });
+		// Check the result of the email sending
+		if (emailResult.success) {
+			return res.status(200).json({ message: 'Password reset link has been sent to your email.' });
+		} else {
+			// If email sending failed, send an error response
+			return res.status(500).json({ error: "Failed to send password reset email." });
+		}
 
     } catch (error) {
 		return res.status(500).json({ error: "Internal Server Error!"});

@@ -411,7 +411,6 @@ const fetchProductDetailsFunction = async (req, res) => {
 
 
 
-
 module.exports = {
     fetchProductsByCategoryFunction,
     fetchFlashSaleProductFunction,

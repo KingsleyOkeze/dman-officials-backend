@@ -88,14 +88,20 @@ const signupFunction = async (req, res) => {
 		const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
 
 		// Send email to customer and optionally notify support/admin.
-		emailingFunction(email, 'Account Sign up - DMAN Admin', signUpEmailHtml);
+		const emailResult = await emailingFunction(email, 'Account Sign up - DMAN Admin', signUpEmailHtml);
 
 		console.log("Admin account successfully created!");
 
-		return res.status(201).json({ 
-			userId: createdUser._id,
-			message: "An email on how to complete sign up was sent to you"
-		});
+        // Check the result of the email sending
+        if (emailResult.success) {
+            return res.status(201).json({ 
+				userId: createdUser._id,
+				message: "An email on how to complete sign up was sent to you"
+			});
+        } else {
+            // If email sending failed, send an error response
+            return res.status(500).json({ error: "Failed to send password reset email." });
+        }
 
 	} catch (error) {
 		console.log('Sign up error', error);
@@ -203,10 +209,17 @@ const resendSignUpVerificationEmailFunction = async (req, res) => {
 
 		const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
 
-		// Send email to customer and optionally notify support/admin.
-		emailingFunction(email, 'Account Sign up - DMAN Admin', signUpEmailHtml);
+		// Send email to customer.
+		const emailResult = await emailingFunction(email, 'Account Sign up - DMAN Admin', signUpEmailHtml);
 
-		return res.status(200).json({ message: 'An email was sent to you' });
+        // Check the result of the email sending
+        if (emailResult.success) {
+			return res.status(200).json({ message: 'An email was sent to you' });
+        } else {
+            // If email sending failed, send an error response
+            return res.status(500).json({ error: "Failed to send signup verification email." });
+        }
+
 	} catch (error) {
 		console.log('server error while verifying email', error);
 		return res.status(500).json({ error: 'Internal Server Error' });
@@ -269,7 +282,7 @@ const loginFunction = async (req, res) => {
 
 		   // Send email to customer and optionally notify support/admin.
 		   emailingFunction(email, 'Account Sign up - DMAN Admin', signUpEmailHtml);
-
+		   
 			return res.status(403).json({
 				error: 'Email is not verified!',
 				redirectUrl: `${process.env.ADMIN_CLIENT_URL}/admin/email-sent/${user._id}`,
@@ -356,9 +369,17 @@ const forgotPasswordFunction = async (req, res) => {
 
 		const resetPasswordHtml = compileEmailTemplate('passwordReset', resetPasswordData);
 
-		emailingFunction(email, 'Reset Password - DMAN Admin', resetPasswordHtml);
+		// Await the email sending function
+        const emailResult = await emailingFunction(email, 'Reset Password - DMAN Admin', resetPasswordHtml);
 
-		return res.status(200).json({ message: 'Password reset link has been sent to your email.' });
+        // Check the result of the email sending
+        if (emailResult.success) {
+            return res.status(200).json({ message: 'Password reset link has been sent to your email.' });
+        } else {
+            // If email sending failed, send an error response
+            return res.status(500).json({ error: "Failed to send password reset email." });
+        }
+
 	} catch (error) {
 		return res.status(500).json({ error: "Internal Server Error!"});
 	}

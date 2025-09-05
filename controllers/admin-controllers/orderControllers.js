@@ -1,5 +1,7 @@
 // ADMIN ORDER CONTROLLERS
 const orderModel = require("../../models/orderModel"); 
+const emailingFunction = require('../../helpers/emailingFunction');
+const { compileEmailTemplate } = require('../../helpers/emailTemplateHelper');
 
 const fetchOrdersFunction = async (req, res) => {
 
@@ -122,6 +124,20 @@ const updateOrderStatusFunction = async (req, res) => {
         const updatedOrder = await order.save();
         
         console.log('Successfully updated order status:', updatedOrder.orderStatus);
+
+        // --- 🔔 Send email notification to customer ---
+        const customerEmail = order.customerRef.email;
+        const customerName = `${order.firstName} ${order.lastName}`;
+        const emailData = {
+            logoUrl: `${process.env.CUSTOMER_CLIENT_URL}/dman-logo.png`,
+            customerName,
+            orderId: updatedOrder._id,
+            orderStatus: updatedOrder.orderStatus,
+            trackingLink: `${process.env.CUSTOMER_CLIENT_URL}/account/order-tracking/${updatedOrder._id}`
+        };
+        const statusUpdateEmailHtml = compileEmailTemplate('orderStatusUpdate', emailData);
+
+        emailingFunction(customerEmail, `Order Status Updated - ${updatedOrder.orderStatus}`, statusUpdateEmailHtml);
 
         return res.status(200).json({ 
             message: "Successfully updated order status!",
