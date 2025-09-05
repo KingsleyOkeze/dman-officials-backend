@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Order Status Update</title>
+        <style>
+            body { 
+                background-color: #f8f8f8; 
+                font-family: Arial, sans-serif; 
+                margin: 0; 
+                padding: 0; 
+            }
+            .email-container { 
+                background-color: #ffffff; 
+                margin: 0 auto; 
+                padding: 20px; 
+                max-width: 600px; 
+                border-radius: 8px; 
+                box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            }
+            .header { 
+                text-align: center; 
+                padding: 20px; 
+            }
+            .header img { 
+                max-width: 150px; 
+                height: 50px; 
+            }
+            .content { 
+                margin: 20px 0; 
+            }
+            .content h2 { 
+                color: #333333; 
+            }
+            .footer { 
+                font-size: 12px; 
+                text-align: center; 
+                color: #777777; 
+                margin-top: 20px; 
+            }
+            .button {
+                display: inline-block;
+                padding: 10px 20px;
+                margin-top: 15px;
+                background-color: #008CBA;
+                color: #fff !important;
+                text-decoration: none;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="email-container">
+            <div class="header">
+                <img src="{{logoUrl}}" alt="DMAN E-commerce">
+            </div>
+            <div class="content">
+                <h2>{{emailTitle}}</h2>
+                <p>Hello {{customerName}},</p>
+                <p>Your order with reference <strong>{{orderId}}</strong> has been updated.</p>
+                <p><strong>New Status:</strong> {{orderStatus}}</p>
+                <p>You can track your order and view details using the button below:</p>
+                <a class="button" href="{{trackingLink}}">Track Your Order</a>
+            </div>
+            <div class="footer">
+                <p>DMAN E-commerce • {{companyAddress}} • {{companyContact}}</p>
+                <p>If you have any questions, please contact our support team.</p>
+            </div>
+        </div>
+    </body>
+</html>
