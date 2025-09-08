@@ -53,7 +53,6 @@ const signupFunction = async (req, res) => {
         const verificationToken = jwt.sign({ email }, jwt_secret, {
             expiresIn: tokenExpiryTime,
         });
-        console.log('v token', verificationToken);
 
         // Create new user and set verification token before saving
         const newUser = new adminModel({
@@ -126,8 +125,6 @@ const verifySignUpEmailFunction = async (req, res) => {
 			return res.status(401).json({ error: 'Verification token has expired!' });
 		}
 
-		console.log('verification token is verified', verifyToken);
-
 		const user = await adminModel.findOne({ verificationToken: token });
 
 		if (!user) {
@@ -142,7 +139,6 @@ const verifySignUpEmailFunction = async (req, res) => {
 		const savedUser = await user.save();
 
 		if (!savedUser) {
-			console.log('Failed error while verifying email', savedUser);
 			return res.status(401).json({ error: 'Error verifying your email.' });
 		}
 
@@ -163,7 +159,6 @@ const verifySignUpEmailFunction = async (req, res) => {
 // RESEND VERIFICATION EMAIL FUNCTION
 const resendSignUpVerificationEmailFunction = async (req, res) => {
 	const { userId } = req.params;
-    console.log('userId', userId);
 
 	try {
 		if (!userId) {
@@ -191,7 +186,6 @@ const resendSignUpVerificationEmailFunction = async (req, res) => {
 		const setVerificationToken = await user.save();
 
 		if (!setVerificationToken) {
-			console.log('Error setting verification token', setVerificationToken);
 			return res.status(401).json({ error: 'Failed to set veriication token' });
 		}
 
