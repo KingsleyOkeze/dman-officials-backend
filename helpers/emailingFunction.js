@@ -15,7 +15,7 @@ let mailTransporter = nodemailer.createTransport({
 const emailingFunction = async (sendTo, emailSubject, emailHtml) => {
     try {
         let mailDetails = {
-            from: `"Dman Officials" <${process.env.ADMIN_EMAIL}>`,
+            from: process.env.ADMIN_EMAIL,
             to: sendTo,
             subject: emailSubject,
             html: emailHtml

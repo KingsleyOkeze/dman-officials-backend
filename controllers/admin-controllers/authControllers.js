@@ -19,8 +19,6 @@ const { compileEmailTemplate } = require('../../helpers/emailTemplateHelper');
 const signupFunction = async (req, res) => {
 	const { firstName, lastName, email, phone, password } = req.body;
 
-	console.log('sign up info is', firstName, lastName, email, phone, password);
-
 	try {
 		if (!email || !password) {
 			return res.status(400).json({ error: 'All field required!' });
@@ -232,7 +230,6 @@ const resendSignUpVerificationEmailFunction = async (req, res) => {
 const loginFunction = async (req, res) => {
 	const { email, password } = req.body;
 
-	console.log("Login details", email, password);
 	try {
 		if (!email || !password) {
 			return res.status(400).json({ error: 'Email & password is required!' });
