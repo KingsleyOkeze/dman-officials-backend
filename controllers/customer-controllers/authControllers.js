@@ -29,10 +29,6 @@ const signupFunction = async (req, res) => {
         receiveUpdates
     } = req.body;
 
-	console.log(
-        'sign up info is', firstName, lastName, phone, email, password, country, dob, receiveUpdates
-    );
-
 	try {
 		if (!email || !password) {
 			return res.status(400).json({ error: 'All field required!' });
@@ -243,8 +239,6 @@ const resendSignUpVerificationEmailFunction = async (req, res) => {
 // LOGIN FUNCTION
 const loginFunction = async (req, res) => {
 	const { email, password, ip } = req.body;
-
-	console.log("Login details", email, password);
 
 	try {
 		if (!email || !password) {
