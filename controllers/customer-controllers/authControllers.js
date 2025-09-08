@@ -64,7 +64,6 @@ const signupFunction = async (req, res) => {
         const verificationToken = jwt.sign({ email }, jwt_secret, {
             expiresIn: tokenExpiryTime,
         });
-        console.log('v token', verificationToken);
 
         // Create new user and set verification token before saving
         const newUser = new customerModel({
@@ -123,7 +122,6 @@ const signupFunction = async (req, res) => {
 // VERIFICATION EMAIL FUNCTION
 const verifySignUpEmailFunction = async (req, res) => {
 	const { token } = req.params;
-	console.log('Received token:', token);
 
 	try {
 		if (!token) {
@@ -132,7 +130,6 @@ const verifySignUpEmailFunction = async (req, res) => {
 		const verifyToken = jwt.verify(token, jwt_secret);
 
 		if (!verifyToken) {
-			console.log('verification token has expired', verifyToken);
 			return res.status(401).json({ error: 'Verification token has expired!' });
 		}
 
@@ -152,11 +149,9 @@ const verifySignUpEmailFunction = async (req, res) => {
 		const savedUser = await user.save();
 
 		if (!savedUser) {
-			console.log('Failed error while verifying email', savedUser);
 			return res.status(401).json({ error: 'Error verifying your email.' });
 		}
 
-		console.log('success while verifying email', savedUser);
 		return res.status(200).json({
 			userId: savedUser._id,
 			role: savedUser.role,
@@ -173,7 +168,6 @@ const verifySignUpEmailFunction = async (req, res) => {
 // RESEND VERIFICATION EMAIL FUNCTION
 const resendSignUpVerificationEmailFunction = async (req, res) => {
 	const { userId } = req.params;
-    console.log('usr', userId);
 
 	try {
 		if (!userId) {
