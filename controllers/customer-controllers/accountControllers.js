@@ -284,7 +284,7 @@ const removeFromSavedProductFunction = async (req, res) => {
   
         // Remove the product from the Saved Products
         const removedSavedItem = await savedProductModel.findOneAndDelete({ 
-          _id: itemId,
+          productRef: itemId,
           customerRef: customerId, 
         });
   
