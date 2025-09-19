@@ -231,6 +231,37 @@ const removeFromCartFunction = async (req, res) => {
 };
 
 
+const deleteCartFunction = async (req, res) => {
+    const { customerId } = req.params;
+
+    try {
+        // Validate customerId
+        if (!customerId) {
+            return res.status(400).json({ error: 'Customer ID is required' });
+        }
+
+        // Check if there are any cart items to delete
+        const cartItems = await cartModel.find({ customerRef: customerId });
+        if (!cartItems || cartItems.length === 0) {
+            return res.status(404).json({ error: 'No cart items found for this customer!' });
+        }
+
+        // Delete cart items
+        const result = await cartModel.deleteMany({ customerRef: customerId });
+
+        // Check if any documents were deleted
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ error: 'No cart items were deleted!' });
+        }
+        console.log('Cart cleared successfully!')
+        return res.status(200).json({ message: 'Cart cleared successfully!' });
+
+    } catch (error) {
+        console.error('Error clearing cart:', error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
 
 const placeOrderFunction = async (req, res) => {
     const {
@@ -369,6 +400,7 @@ module.exports = {
     updateQuantityFunction,
     fetchCartFunction,
     removeFromCartFunction,
+    deleteCartFunction,
     fetchCartTotalPriceFunction,
     placeOrderFunction
 };

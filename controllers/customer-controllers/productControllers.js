@@ -239,68 +239,76 @@ const fetchRecommendedProductFunction = async (req, res) => {
 
 
 const searchProductFunction = async (req, res) => {
-    const { 
-        searchInput, 
-        limit, 
-        page, 
-        sortBy, 
-        subCategory 
-    } = req.query;
+    const { searchInput, limit = 12, page = 0, sortBy, subCategory } = req.query;
 
     try {
-        // Pagination setup (unchanged from your original)
+        // Pagination setup
         const itemsPerPage = parseInt(limit) || 12;
         const currentPage = parseInt(page) || 0;
         const skip = currentPage * itemsPerPage;
 
+        // Base query
         let filterQuery = { isDeleted: false };
-        let sortOptions = { createdAt: -1 }; // default newest first
+        let sortOptions = { score: { $meta: "textScore" } }; // Default to relevance
 
         // Add subCategory filter if not "All"
         if (subCategory && subCategory !== "All") {
             filterQuery.productSubCategory = subCategory;
         }
 
-        // Sorting logic (unchanged)
+        // Require searchInput for search
+        if (!searchInput) {
+            console.log('No searchInput provided, returning empty');
+            return res.status(200).json({
+                success: true,
+                result: [],
+                totalProducts: 0,
+                totalPages: 0,
+                currentPage,
+                message: 'No search term provided'
+            });
+        }
+
+        // Add text search
+        filterQuery.$text = {
+            $search: searchInput,
+            $caseSensitive: false,
+            $diacriticSensitive: false
+        };
+
+        // Sorting: Combine relevance with user-specified sort
         if (sortBy === 'latest') {
-            sortOptions = { createdAt: -1 };
+            sortOptions = { ...sortOptions, createdAt: -1 };
         } else if (sortBy === 'oldest') {
-            sortOptions = { createdAt: 1 };
+            sortOptions = { ...sortOptions, createdAt: 1 };
         }
-    
-        // Improved search using MongoDB text index
-        if (searchInput) {
-            filterQuery.$text = { 
-                $search: searchInput,
-                $caseSensitive: false,
-                $diacriticSensitive: false 
-            };
-            // Sort by relevance score if no sort specified
-            if (!sortBy) {
-                sortOptions = { score: { $meta: "textScore" } };
-            }
-        }
-    
-        // Query execution (same as original but more efficient)
-        const products = await productModel.find(filterQuery)
+
+        // Execute query
+        const products = await productModel
+            .find(filterQuery)
             .sort(sortOptions)
             .skip(skip)
-            .limit(itemsPerPage);
-    
-        // Count total (unchanged)
+            .limit(itemsPerPage)
+            .lean();
+
+        // Log results for debugging
+        console.log(`Search "${searchInput}" returned ${products.length} products`);
+
+        // Count total
         const totalProducts = await productModel.countDocuments(filterQuery);
 
-        // Response format (unchanged)
+        // Response
         return res.status(200).json({
             success: true,
             result: products,
             totalProducts,
             totalPages: Math.ceil(totalProducts / itemsPerPage),
             currentPage,
+            message: products.length ? 'Search results retrieved' : 'No matching products found'
         });
     } catch (error) {
         console.error("Error searching products:", error);
-        return res.status(500).json({ success: false, message: "Internal Server Error" });
+        return res.status(500).json({ success: false, message: "Internal Server Error!" });
     }
 };
 
@@ -315,14 +323,21 @@ const fetchProductsByCategoryFunction = async (req, res) => {
         searchInput
     } = req.query;
 
-    console.log('fetch by category called', category, 
-        subCategory, 
-        sortBy,
-        page,
-        limit,
-        searchInput);
-        
+    console.log('fetch by category called', { category, subCategory, sortBy, page, limit, searchInput });
+
     try {
+        // Validate category
+        const validCategories = ['MensWear', 'Accessories', 'FootWear', 'TrendingNow', 'Explore', 'Sale', 'Search'];
+        if (category && !validCategories.includes(category)) {
+            console.log(`Invalid category: ${category}`);
+            return res.status(400).json({
+                success: false,
+                result: [],
+                totalPages: 0,
+                error: `Invalid category: ${category}. Must be one of ${validCategories.join(', ')}`
+            });
+        }
+
         // Handle special categories
         if (category === "TrendingNow") {
             req.query.page = page;
@@ -339,7 +354,7 @@ const fetchProductsByCategoryFunction = async (req, res) => {
             req.query.limit = limit;
             return await fetchFlashSaleProductFunction(req, res);
         }
-        if (category === "search") {
+        if (category === "Search") {
             req.query.page = page;
             req.query.limit = limit;
             req.query.sortBy = sortBy;
@@ -347,11 +362,11 @@ const fetchProductsByCategoryFunction = async (req, res) => {
             return await searchProductFunction(req, res);
         }
 
-        // Default filter 
+        // Default filter
         const query = { isDeleted: false };
         if (category) query.productCategory = category;
-        
-        // Only add subCategory filter if it exists and isn't "All"
+
+        // Add subCategory filter if not "All"
         if (subCategory && subCategory !== "All") {
             query.productSubCategory = subCategory;
         }
@@ -361,8 +376,9 @@ const fetchProductsByCategoryFunction = async (req, res) => {
         if (sortBy === 'latest') sortOptions = { createdAt: -1 };
         if (sortBy === 'oldest') sortOptions = { createdAt: 1 };
 
-        // Added .lean() for better performance
-        const products = await productModel.find(query)
+        // Fetch products
+        const products = await productModel
+            .find(query)
             .sort(sortOptions)
             .skip(parseInt(page) * parseInt(limit))
             .limit(parseInt(limit))
@@ -370,15 +386,19 @@ const fetchProductsByCategoryFunction = async (req, res) => {
 
         const totalProductsCountInDb = await productModel.countDocuments(query);
 
+        // Log result count for debugging
+        console.log(`Fetched ${products.length} products for category: ${category || 'none'}`);
+
         return res.status(200).json({
+            success: true,
             result: products,
             totalPages: Math.ceil(totalProductsCountInDb / parseInt(limit)),
-            message: "Successfully fetched products!"
+            message: products.length ? 'Successfully fetched products!' : `No products found for category: ${category || 'none'}`
         });
 
     } catch (error) {
-        console.log("Server Error fetching products", error);
-        return res.status(500).json({ error: "Internal Server Error!" });
+        console.error("Server Error fetching products", error);
+        return res.status(500).json({ success: false, error: "Internal Server Error!" });
     }
 };
 
