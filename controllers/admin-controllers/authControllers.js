@@ -33,13 +33,13 @@ const signupFunction = async (req, res) => {
 		const existAsACustomer = await customerModel.findOne({ email });
 
 		if (existAsACustomer) {
-			return res.status(401).json({ error: 'User already exist.' });
+			return res.status(409).json({ error: 'Email registered as a customer.' });
 		}
 
 		const user = await adminModel.findOne({ email });
 
 		if (user) {
-			return res.status(401).json({ error: 'User already exist.' });
+			return res.status(409).json({ error: 'User already exist.' });
 		}
 
 		const role = 'Admin';
@@ -68,7 +68,7 @@ const signupFunction = async (req, res) => {
         const createdUser = await newUser.save();
 
         if (!createdUser) {
-            return res.status(401).json({ error: "Failed to create user account!" });
+            return res.status(500).json({ error: "Failed to create user account!" });
         }
 
 		const verificationLink = `${process.env.ADMIN_CLIENT_URL}/admin/sign-up-email-verification/${verificationToken}`;
