@@ -93,7 +93,8 @@ productSchema.index({
     weights: {
         productName: 3,
         productCategory: 2,
-        productSubCategory: 2
+        productSubCategory: 2,
+        productDescription: 1
     },
     name: 'product_search_index'
 });
@@ -120,6 +121,4 @@ productSchema.index({
 const productModel = mongoose.model("products", productSchema);
 
 module.exports = productModel;
-
-
 

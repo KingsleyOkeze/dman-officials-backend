@@ -26,7 +26,8 @@ const {
     removeFromCartFunction,
     fetchCartTotalPriceFunction,
     placeOrderFunction,
-    fetchOrderPurchasedTrackingStatusFunction
+    fetchOrderPurchasedTrackingStatusFunction,
+    deleteCartFunction
 } = require("../controllers/customer-controllers/cartControllers");
 const { 
     // initializeTransactionFunction, 
@@ -88,6 +89,7 @@ router.get("/fetch-cart", customerAuth, fetchCartFunction);
 router.post("/add-to-cart", customerAuth, addToCartFunction);
 router.post("/update-cart", customerAuth, updateQuantityFunction)
 router.post("/remove-from-cart", customerAuth, removeFromCartFunction);
+router.delete('/customer/clear-cart', customerAuth, deleteCartFunction);
 router.get("/fetch-cart-total-price", customerAuth, fetchCartTotalPriceFunction);
 router.post("/place-order", customerAuth, placeOrderFunction);
 
