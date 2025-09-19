@@ -18,44 +18,53 @@ const activityLogsModel = require('../../models/activityLogsModel');
 
 // Sign up function
 const signupFunction = async (req, res) => {
-	const { 
-        firstName,
-        lastName,
-        email,
-        password,
-        phone,
-        country,
-        dob,
-        receiveUpdates
-    } = req.body;
+    const { firstName, lastName, email, phone, password } = req.body;
 
-	try {
-		if (!email || !password) {
-			return res.status(400).json({ error: 'All field required!' });
-		}
+    try {
+        // Validate all required fields
+        if (!firstName || !lastName || !email || !phone || !password) {
+            return res.status(400).json({ error: 'All fields are required!' });
+        }
+
+        // Validate firstName and lastName (non-empty after trim)
+        if (firstName.trim().length === 0) {
+            return res.status(400).json({ error: 'First name is required.' });
+        }
+        if (lastName.trim().length === 0) {
+            return res.status(400).json({ error: 'Last name is required.' });
+        }
 
         // Validate email
-		if (!isValidEmail(email)) {
-			console.log('Invalid email');
-			return res.status(403).json({ error: "Invalid email!"})
-		} 
+        const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!isValidEmail(email)) {
+            console.log('Invalid email');
+            return res.status(400).json({ error: 'Invalid email format!' });
+        }
 
-		// Check if email already exist in the database
-        const existAsAnAdmin = await adminModel.findOne({ email });
+        // Validate phone (basic check for length; adjust based on country if needed)
+        if (phone.length < 10) {
+            return res.status(400).json({ error: 'Phone number must be at least 10 digits.' });
+        }
 
-		if (existAsAnAdmin) {
-			return res.status(401).json({ error: 'User already exist.' });
-		}
+        // Validate password (minimum 6 characters, at least one uppercase, lowercase, number)
+        if (password.length < 6 || !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters long and include uppercase, lowercase, and a number.' });
+        }
 
-		const user = await customerModel.findOne({ email });
+        // Check if email already exists in customer or admin models
+        const existAsACustomer = await customerModel.findOne({ email });
+        if (existAsACustomer) {
+            return res.status(409).json({ error: 'User Already exists.' });
+        }
 
-		if (user) {
-			return res.status(401).json({ error: 'User already exist.' });
-		}
+        const user = await adminModel.findOne({ email });
+        if (user) {
+            return res.status(409).json({ error: 'Email already exists. Please use a different email or log in.' });
+        }
 
-		const role = 'Customer';
+        const role = 'Admin';
 
-		const hashedPassword = await bcrypt.hash(password, salt);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
         // Token expiry time (in seconds)
         const tokenExpiryTime = 60 * 5; // 5 minutes
@@ -66,56 +75,60 @@ const signupFunction = async (req, res) => {
         });
 
         // Create new user and set verification token before saving
-        const newUser = new customerModel({
-            firstName,
-            lastName,
-            email,
+        const newUser = new adminModel({
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            email: email.trim(),
             phoneNumber: phone,
-            country,
-            dob,
-            receiveUpdates,
             password: hashedPassword,
             role,
-            verificationToken, // Set token here
+            verificationToken,
         });
 
         const createdUser = await newUser.save();
 
         if (!createdUser) {
-            return res.status(401).json({ error: "Failed to create user account!" });
+            return res.status(500).json({ error: 'Failed to create user account!' });
         }
 
-		const verificationLink = `${process.env.CUSTOMER_CLIENT_URL}/sign-up-email-verification/${verificationToken}`;
+        const verificationLink = `${process.env.ADMIN_CLIENT_URL}/admin/sign-up-email-verification/${verificationToken}`;
 
-		// Compile and send account sign up email
-		const signUpEmailData = {
-			logoUrl: `${process.env.CUSTOMER_CLIENT_URL}/dman-logo.png`, 
-			title: 'Account Sign up - DMAN E-commerce',
-			firstName: firstName,
-			verificationLink: verificationLink,
-		};
+        // Compile and send account sign up email
+        const signUpEmailData = {
+            logoUrl: `${process.env.ADMIN_CLIENT_URL}/dman-logo.png`,
+            title: 'Account Sign up - DMAN Admin',
+            firstName: firstName.trim(),
+            verificationLink: verificationLink,
+        };
 
-		const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
+        const signUpEmailHtml = compileEmailTemplate('accountEmailVerification', signUpEmailData);
 
-		// Await the email sending function
-		const emailResult = await emailingFunction(email, 'Account Sign up - DMAN E-commerce', signUpEmailHtml);
+        // Send email with timeout
+        const emailResult = await Promise.race([
+            emailingFunction(email.trim(), 'Account Sign up - DMAN Admin', signUpEmailHtml),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Email sending timeout')), 10000) // 10s timeout
+            )
+        ]);
 
         // Check the result of the email sending
         if (emailResult.success) {
-            console.log("customer account successfully created!")
-			return res.status(201).json({ 
-				userId: createdUser._id,
-				message: "An email on how to complete sign up was sent to you"
-			});
+            console.log('Admin account successfully created!');
+            return res.status(201).json({
+                userId: createdUser._id,
+                message: 'An email on how to complete sign up was sent to you'
+            });
         } else {
-            // If email sending failed, send an error response
-            return res.status(500).json({ error: "Failed to send password reset email." });
+            console.error('Email sending failed:', emailResult.error);
+            return res.status(201).json({
+                userId: createdUser._id,
+                message: 'Account created successfully, but email sending failed. Please check your spam folder or contact support.'
+            });
         }
-		
-	} catch (error) {
-		console.log('Sign up error', error);
-		return res.status(500).json({ error: 'Internal Server Error!' });
-	}
+    } catch (error) {
+        console.log('Sign up error', error);
+        return res.status(500).json({ error: `Internal Server Error: ${error.message}` });
+    }
 };
 
 
